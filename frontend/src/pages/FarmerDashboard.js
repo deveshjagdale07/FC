@@ -9,6 +9,8 @@ const FarmerDashboard = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     category: 'fruits',
@@ -61,8 +63,44 @@ const FarmerDashboard = () => {
     }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file (JPEG, PNG, GIF)');
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+
+      setImageFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateProduct = async (e) => {
     e.preventDefault();
+
+    if (!formData.name || !formData.price || !formData.quantity) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (!imageFile) {
+      toast.error('Please select a product image');
+      return;
+    }
 
     const data = new FormData();
     data.append('name', formData.name);
@@ -73,11 +111,14 @@ const FarmerDashboard = () => {
     data.append('unit', formData.unit);
     data.append('harvestDate', formData.harvestDate);
     data.append('isOrganic', formData.isOrganic);
+    data.append('images', imageFile); // Match backend field name 'images'
 
     try {
       await productAPI.create(data);
       toast.success('Product created successfully!');
       setShowProductForm(false);
+      setImageFile(null);
+      setImagePreview(null);
       setFormData({
         name: '',
         category: 'fruits',
@@ -264,6 +305,50 @@ const FarmerDashboard = () => {
                 className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
               />
 
+              {/* Image Upload Section */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                {imagePreview ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-center">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="max-h-48 rounded-lg object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                      }}
+                      className="w-full text-red-600 hover:text-red-800 font-semibold text-sm"
+                    >
+                      Remove Image
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer">
+                    <div className="text-center">
+                      <div className="text-4xl text-gray-400 mb-2">📷</div>
+                      <p className="font-semibold text-gray-700 mb-1">
+                        Click to upload product image
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        PNG, JPG, GIF (Max 5MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      required
+                    />
+                  </label>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input
                   type="number"
@@ -323,7 +408,21 @@ const FarmerDashboard = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShowProductForm(false)}
+                  onClick={() => {
+                    setShowProductForm(false);
+                    setImageFile(null);
+                    setImagePreview(null);
+                    setFormData({
+                      name: '',
+                      category: 'fruits',
+                      description: '',
+                      price: '',
+                      quantity: '',
+                      unit: 'kg',
+                      harvestDate: '',
+                      isOrganic: false,
+                    });
+                  }}
                   className="btn-outline"
                 >
                   Cancel
@@ -341,6 +440,21 @@ const FarmerDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product) => (
                 <div key={product.id} className="card">
+                  {/* Product Image */}
+                  <div className="w-full h-40 bg-gray-200 rounded mb-4 overflow-hidden">
+                    {product.images && product.images.length > 0 ? (
+                      <img
+                        src={`http://localhost:5000${product.images[0]}`}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+
                   <h3 className="font-bold text-lg mb-2">{product.name}</h3>
                   <p className="text-gray-600 text-sm mb-2 line-clamp-2">
                     {product.description}

@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 
 module.exports = {
   database: {
@@ -17,6 +18,6 @@ module.exports = {
   },
   upload: {
     maxFileSize: process.env.MAX_FILE_SIZE || 5242880, // 5MB
-    uploadPath: process.env.UPLOAD_PATH || './uploads',
+    uploadPath: process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads'),
   },
 };

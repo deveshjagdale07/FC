@@ -10,10 +10,10 @@ const createProduct = async (req, res) => {
     const { name, category, description, price, quantity, unit, harvestDate, isOrganic } = req.body;
     const farmerId = req.user.userId;
 
-    // Handle images
+    // Handle image
     let images = [];
-    if (req.files && req.files.length > 0) {
-      images = req.files.map(file => `/uploads/${file.filename}`);
+    if (req.file) {
+      images.push(`/uploads/${req.file.filename}`);
     }
 
     const product = await prisma.product.create({
@@ -176,12 +176,10 @@ const updateProduct = async (req, res) => {
       });
     }
 
-    // Handle new images
+    // Handle new image
     let images = product.images;
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => `/uploads/${file.filename}`);
-      const existingImages = product.images ? JSON.parse(product.images) : [];
-      images = JSON.stringify([...existingImages, ...newImages]);
+    if (req.file) {
+      images = JSON.stringify([`/uploads/${req.file.filename}`]);
     }
 
     const updatedProduct = await prisma.product.update({
