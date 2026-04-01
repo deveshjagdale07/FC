@@ -1,0 +1,150 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - includes Farmer, Customer, and Admin
+model User {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  password      String
+  fullName      String
+  phone         String?
+  address       String?
+  role          Role      @default(CUSTOMER)
+  profileImage  String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  products      Product[]
+  orders        Order[]
+  reviews       Review[]
+  cartItems     CartItem[]
+
+  @@map("users")
+}
+
+enum Role {
+  FARMER
+  CUSTOMER
+  ADMIN
+}
+
+// Product model - Items listed by farmers
+model Product {
+  id               Int       @id @default(autoincrement())
+  farmerId         Int
+  farmer           User      @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  name             String
+  category         String    // fruits, vegetables, grains, dairy
+  description      String    @db.LongText
+  price            Float
+  quantity         Int
+  unit             String    // kg, litre, piece
+  harvestDate      DateTime?
+  isOrganic        Boolean   @default(false)
+  images           String?   // JSON array of image paths
+  rating           Float     @default(0)
+  totalReviews     Int       @default(0)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  reviews          Review[]
+  orderItems       OrderItem[]
+  cartItems        CartItem[]
+
+  @@map("products")
+}
+
+// Review model - Customer reviews for products
+model Review {
+  id               Int       @id @default(autoincrement())
+  productId        Int
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customerId       Int
+  customer         User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  rating           Int       // 1-5 stars
+  comment          String?   @db.LongText
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([productId, customerId])
+  @@map("reviews")
+}
+
+// Cart model - Shopping cart for customers
+model CartItem {
+  id               Int       @id @default(autoincrement())
+  customerId       Int
+  customer         User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  productId        Int
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity         Int
+  addedAt          DateTime  @default(now())
+
+  @@unique([customerId, productId])
+  @@map("cart_items")
+}
+
+// Order model - Customer orders
+model Order {
+  id               Int           @id @default(autoincrement())
+  customerId       Int
+  customer         User          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  totalPrice       Float
+  status           OrderStatus   @default(PENDING)
+  paymentMethod    PaymentMethod @default(COD)
+  paymentStatus    PaymentStatus @default(PENDING)
+  deliveryAddress  String
+  orderNumber      String        @unique
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  items            OrderItem[]
+
+  @@map("orders")
+}
+
+// OrderItem model - Individual items in an order
+model OrderItem {
+  id               Int       @id @default(autoincrement())
+  orderId          Int
+  order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId        Int
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity         Int
+  priceAtOrder     Float     // price when order was placed
+  createdAt        DateTime  @default(now())
+
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING      // Pending farmer acceptance
+  ACCEPTED     // Farmer accepted
+  REJECTED     // Farmer rejected
+  SHIPPED      // On the way
+  DELIVERED    // Delivered to customer
+}
+
+enum PaymentMethod {
+  COD            // Cash on Delivery
+  ONLINE         // Online payment (dummy)
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}

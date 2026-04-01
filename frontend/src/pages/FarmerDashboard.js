@@ -1,0 +1,375 @@
+import React, { useState, useEffect } from 'react';
+import { orderAPI, productAPI } from '../services/api';
+import { FiPlus, FiEdit, FiTrash2, FiPackage } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+
+const FarmerDashboard = () => {
+  const [activeTab, setActiveTab] = useState('orders');
+  const [orders, setOrders] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    category: 'fruits',
+    description: '',
+    price: '',
+    quantity: '',
+    unit: 'kg',
+    harvestDate: '',
+    isOrganic: false,
+  });
+
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
+    } else {
+      fetchProducts();
+    }
+  }, [activeTab]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await orderAPI.getFarmerOrders();
+      setOrders(response.data.data.orders || []);
+    } catch (error) {
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      // This would need a getFarmerProducts endpoint
+      const response = await productAPI.getAll();
+      setProducts(response.data.data.products || []);
+    } catch (error) {
+      toast.error('Failed to load products');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProductFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('category', formData.category);
+    data.append('description', formData.description);
+    data.append('price', formData.price);
+    data.append('quantity', formData.quantity);
+    data.append('unit', formData.unit);
+    data.append('harvestDate', formData.harvestDate);
+    data.append('isOrganic', formData.isOrganic);
+
+    try {
+      await productAPI.create(data);
+      toast.success('Product created successfully!');
+      setShowProductForm(false);
+      setFormData({
+        name: '',
+        category: 'fruits',
+        description: '',
+        price: '',
+        quantity: '',
+        unit: 'kg',
+        harvestDate: '',
+        isOrganic: false,
+      });
+      fetchProducts();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create product');
+    }
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      await productAPI.delete(productId);
+      toast.success('Product deleted');
+      fetchProducts();
+    } catch (error) {
+      toast.error('Failed to delete product');
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await orderAPI.updateStatus(orderId, { status: newStatus });
+      toast.success('Order status updated');
+      fetchOrders();
+    } catch (error) {
+      toast.error('Failed to update order status');
+    }
+  };
+
+  return (
+    <div className="container-main">
+      <h1 className="text-4xl font-bold mb-8">Farmer Dashboard</h1>
+
+      {/* Tabs */}
+      <div className="flex gap-4 mb-8 border-b">
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`px-4 py-3 font-semibold border-b-2 ${
+            activeTab === 'orders'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          Orders
+        </button>
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`px-4 py-3 font-semibold border-b-2 ${
+            activeTab === 'products'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          Products
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      ) : activeTab === 'orders' ? (
+        /* Orders Tab */
+        <div className="space-y-6">
+          {orders.length === 0 ? (
+            <div className="text-center card py-12">
+              <FiPackage className="mx-auto text-6xl text-gray-300 mb-4" />
+              <p className="text-gray-500">No orders yet</p>
+            </div>
+          ) : (
+            orders.map((order) => (
+              <div key={order.id} className="card">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <p className="text-gray-600 text-sm">Order Number</p>
+                    <p className="font-bold">{order.orderNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Customer</p>
+                    <p className="font-bold">{order.customer.fullName}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Status</p>
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                      className="font-bold px-3 py-1 border rounded"
+                    >
+                      <option value="PENDING">Pending</option>
+                      <option value="ACCEPTED">Accept</option>
+                      <option value="REJECTED">Reject</option>
+                      <option value="SHIPPED">Shipped</option>
+                      <option value="DELIVERED">Delivered</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  {order.items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-center py-2 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{item.product.name}</p>
+                        <p className="text-gray-600">
+                          {item.quantity} {item.product.unit} @ ₹{item.priceAtOrder}
+                        </p>
+                      </div>
+                      <p className="font-semibold">
+                        ₹{(item.priceAtOrder * item.quantity).toFixed(2)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t mt-4 pt-4">
+                  <p className="text-sm font-semibold">
+                    Delivery to: {order.customer.address}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Phone: {order.customer.phone}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ) : (
+        /* Products Tab */
+        <div>
+          <button
+            onClick={() => setShowProductForm(!showProductForm)}
+            className="mb-6 btn-primary flex items-center gap-2"
+          >
+            <FiPlus /> Add New Product
+          </button>
+
+          {/* Product Form */}
+          {showProductForm && (
+            <form onSubmit={handleCreateProduct} className="card mb-6 space-y-4">
+              <h2 className="font-bold text-xl">Add New Product</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  name="name"
+                  placeholder="Product Name"
+                  value={formData.name}
+                  onChange={handleProductFormChange}
+                  required
+                  className="px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                />
+
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleProductFormChange}
+                  className="px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                >
+                  <option value="fruits">Fruits</option>
+                  <option value="vegetables">Vegetables</option>
+                  <option value="grains">Grains</option>
+                  <option value="dairy">Dairy</option>
+                </select>
+              </div>
+
+              <textarea
+                name="description"
+                placeholder="Product Description"
+                value={formData.description}
+                onChange={handleProductFormChange}
+                required
+                rows="3"
+                className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input
+                  type="number"
+                  name="price"
+                  placeholder="Price (₹)"
+                  value={formData.price}
+                  onChange={handleProductFormChange}
+                  required
+                  step="0.01"
+                  className="px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                />
+
+                <input
+                  type="number"
+                  name="quantity"
+                  placeholder="Quantity"
+                  value={formData.quantity}
+                  onChange={handleProductFormChange}
+                  required
+                  className="px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                />
+
+                <select
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleProductFormChange}
+                  className="px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                >
+                  <option value="kg">kg</option>
+                  <option value="litre">litre</option>
+                  <option value="piece">piece</option>
+                  <option value="gram">gram</option>
+                </select>
+
+                <input
+                  type="date"
+                  name="harvestDate"
+                  value={formData.harvestDate}
+                  onChange={handleProductFormChange}
+                  className="px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="isOrganic"
+                  checked={formData.isOrganic}
+                  onChange={handleProductFormChange}
+                />
+                <span className="font-semibold">This product is organic</span>
+              </label>
+
+              <div className="flex gap-3">
+                <button type="submit" className="btn-primary">
+                  Create Product
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowProductForm(false)}
+                  className="btn-outline"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Products List */}
+          {products.length === 0 ? (
+            <div className="text-center card py-12">
+              <p className="text-gray-500">No products yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.map((product) => (
+                <div key={product.id} className="card">
+                  <h3 className="font-bold text-lg mb-2">{product.name}</h3>
+                  <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                    {product.description}
+                  </p>
+                  <p className="font-bold text-primary mb-2">
+                    ₹{product.price} / {product.unit}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Stock: {product.quantity}
+                  </p>
+                  <div className="flex gap-2">
+                    <button className="flex-1 btn-outline text-sm flex items-center justify-center gap-1">
+                      <FiEdit /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteProduct(product.id)}
+                      className="flex-1 bg-red-100 text-red-800 px-3 py-2 rounded text-sm flex items-center justify-center gap-1 hover:bg-red-200"
+                    >
+                      <FiTrash2 /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default FarmerDashboard;
