@@ -9,6 +9,8 @@ const FarmerDashboard = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingProductId, setEditingProductId] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [formData, setFormData] = useState({
@@ -45,10 +47,18 @@ const FarmerDashboard = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      // This would need a getFarmerProducts endpoint
       const response = await productAPI.getAll();
-      setProducts(response.data.data.products || []);
+      const productsData = response.data.data.products || [];
+      
+      // Parse images if they're strings
+      const parsedProducts = productsData.map(product => ({
+        ...product,
+        images: typeof product.images === 'string' ? JSON.parse(product.images) : (product.images || [])
+      }));
+      
+      setProducts(parsedProducts);
     } catch (error) {
+      console.error('Failed to load products:', error);
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
@@ -97,7 +107,8 @@ const FarmerDashboard = () => {
       return;
     }
 
-    if (!imageFile) {
+    // For create mode, image is required
+    if (!isEditMode && !imageFile) {
       toast.error('Please select a product image');
       return;
     }
@@ -111,12 +122,24 @@ const FarmerDashboard = () => {
     data.append('unit', formData.unit);
     data.append('harvestDate', formData.harvestDate);
     data.append('isOrganic', formData.isOrganic);
-    data.append('images', imageFile); // Match backend field name 'images'
+    
+    // Add image only if a new file is selected
+    if (imageFile) {
+      data.append('images', imageFile);
+    }
 
     try {
-      await productAPI.create(data);
-      toast.success('Product created successfully!');
+      if (isEditMode) {
+        await productAPI.update(editingProductId, data);
+        toast.success('Product updated successfully!');
+      } else {
+        await productAPI.create(data);
+        toast.success('Product created successfully!');
+      }
+      
       setShowProductForm(false);
+      setIsEditMode(false);
+      setEditingProductId(null);
       setImageFile(null);
       setImagePreview(null);
       setFormData({
@@ -131,8 +154,51 @@ const FarmerDashboard = () => {
       });
       fetchProducts();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create product');
+      toast.error(error.response?.data?.message || (isEditMode ? 'Failed to update product' : 'Failed to create product'));
     }
+  };
+
+  const handleEditProduct = (product) => {
+    setFormData({
+      name: product.name,
+      category: product.category,
+      description: product.description,
+      price: product.price.toString(),
+      quantity: product.quantity.toString(),
+      unit: product.unit,
+      harvestDate: product.harvestDate ? product.harvestDate.split('T')[0] : '',
+      isOrganic: product.isOrganic,
+    });
+
+    // Set image preview if exists
+    if (product.images && product.images.length > 0) {
+      setImagePreview(`http://localhost:5000${product.images[0]}`);
+    } else {
+      setImagePreview(null);
+    }
+
+    setImageFile(null);
+    setEditingProductId(product.id);
+    setIsEditMode(true);
+    setShowProductForm(true);
+  };
+
+  const cancelEdit = () => {
+    setShowProductForm(false);
+    setIsEditMode(false);
+    setEditingProductId(null);
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData({
+      name: '',
+      category: 'fruits',
+      description: '',
+      price: '',
+      quantity: '',
+      unit: 'kg',
+      harvestDate: '',
+      isOrganic: false,
+    });
   };
 
   const handleDeleteProduct = async (productId) => {
@@ -259,17 +325,37 @@ const FarmerDashboard = () => {
       ) : (
         /* Products Tab */
         <div>
-          <button
-            onClick={() => setShowProductForm(!showProductForm)}
-            className="mb-6 btn-primary flex items-center gap-2"
-          >
-            <FiPlus /> Add New Product
-          </button>
+          {!showProductForm && (
+            <button
+              onClick={() => {
+                setIsEditMode(false);
+                setEditingProductId(null);
+                setImageFile(null);
+                setImagePreview(null);
+                setFormData({
+                  name: '',
+                  category: 'fruits',
+                  description: '',
+                  price: '',
+                  quantity: '',
+                  unit: 'kg',
+                  harvestDate: '',
+                  isOrganic: false,
+                });
+                setShowProductForm(true);
+              }}
+              className="mb-6 btn-primary flex items-center gap-2"
+            >
+              <FiPlus /> Add New Product
+            </button>
+          )}
 
           {/* Product Form */}
           {showProductForm && (
             <form onSubmit={handleCreateProduct} className="card mb-6 space-y-4">
-              <h2 className="font-bold text-xl">Add New Product</h2>
+              <h2 className="font-bold text-xl">
+                {isEditMode ? 'Edit Product' : 'Add New Product'}
+              </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input
@@ -324,7 +410,7 @@ const FarmerDashboard = () => {
                       }}
                       className="w-full text-red-600 hover:text-red-800 font-semibold text-sm"
                     >
-                      Remove Image
+                      {isEditMode ? 'Use Different Image' : 'Remove Image'}
                     </button>
                   </div>
                 ) : (
@@ -343,7 +429,7 @@ const FarmerDashboard = () => {
                       accept="image/*"
                       onChange={handleImageChange}
                       className="hidden"
-                      required
+                      required={!isEditMode}
                     />
                   </label>
                 )}
@@ -404,25 +490,11 @@ const FarmerDashboard = () => {
 
               <div className="flex gap-3">
                 <button type="submit" className="btn-primary">
-                  Create Product
+                  {isEditMode ? 'Update Product' : 'Create Product'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowProductForm(false);
-                    setImageFile(null);
-                    setImagePreview(null);
-                    setFormData({
-                      name: '',
-                      category: 'fruits',
-                      description: '',
-                      price: '',
-                      quantity: '',
-                      unit: 'kg',
-                      harvestDate: '',
-                      isOrganic: false,
-                    });
-                  }}
+                  onClick={cancelEdit}
                   className="btn-outline"
                 >
                   Cancel
@@ -466,7 +538,10 @@ const FarmerDashboard = () => {
                     Stock: {product.quantity}
                   </p>
                   <div className="flex gap-2">
-                    <button className="flex-1 btn-outline text-sm flex items-center justify-center gap-1">
+                    <button 
+                      onClick={() => handleEditProduct(product)}
+                      className="flex-1 btn-outline text-sm flex items-center justify-center gap-1"
+                    >
                       <FiEdit /> Edit
                     </button>
                     <button
