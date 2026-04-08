@@ -22,9 +22,18 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(formData);
+      const data = await login(formData);
       toast.success('Login successful!');
-      navigate('/');
+      const role = data?.data?.user?.role;
+      if (role === 'FARMER') {
+        navigate('/farmer/dashboard');
+      } else if (role === 'CUSTOMER') {
+        navigate('/customer/dashboard');
+      } else if (role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       toast.error(error.message || 'Login failed');
     } finally {

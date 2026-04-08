@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { orderAPI, productAPI } from '../services/api';
-import { FiPlus, FiEdit, FiTrash2, FiPackage } from 'react-icons/fi';
+import { authAPI, orderAPI, productAPI } from '../services/api';
+import { FiPlus, FiEdit, FiTrash2, FiPackage, FiEdit2, FiCheck, FiX, FiUser, FiMail, FiPhone, FiMapPin as FiAddress } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const FarmerDashboard = () => {
@@ -13,6 +13,9 @@ const FarmerDashboard = () => {
   const [editingProductId, setEditingProductId] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [profileEditMode, setProfileEditMode] = useState(false);
+  const [editData, setEditData] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     category: 'fruits',
@@ -27,8 +30,10 @@ const FarmerDashboard = () => {
   useEffect(() => {
     if (activeTab === 'orders') {
       fetchOrders();
-    } else {
+    } else if (activeTab === 'products') {
       fetchProducts();
+    } else if (activeTab === 'profile') {
+      fetchProfile();
     }
   }, [activeTab]);
 
@@ -62,6 +67,43 @@ const FarmerDashboard = () => {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await authAPI.getCurrentUser();
+      setProfile(response.data.data.user);
+      setEditData({
+        fullName: response.data.data.user.fullName,
+        email: response.data.data.user.email,
+        phone: response.data.data.user.phone || '',
+        address: response.data.data.user.address || '',
+      });
+    } catch (error) {
+      toast.error('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      await authAPI.updateProfile(editData);
+      toast.success('Profile updated successfully!');
+      setProfileEditMode(false);
+      fetchProfile();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update profile');
     }
   };
 
@@ -230,6 +272,16 @@ const FarmerDashboard = () => {
       {/* Tabs */}
       <div className="flex gap-4 mb-8 border-b">
         <button
+          onClick={() => setActiveTab('profile')}
+          className={`px-4 py-3 font-semibold border-b-2 flex items-center gap-2 ${
+            activeTab === 'profile'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          <FiUser /> My Profile
+        </button>
+        <button
           onClick={() => setActiveTab('orders')}
           className={`px-4 py-3 font-semibold border-b-2 ${
             activeTab === 'orders'
@@ -254,6 +306,147 @@ const FarmerDashboard = () => {
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+      ) : activeTab === 'profile' ? (
+        /* Profile Tab */
+        <div>
+          {profile ? (
+            <div className="card max-w-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Profile Information</h2>
+                {!profileEditMode && (
+                  <button
+                    onClick={() => setProfileEditMode(true)}
+                    className="btn-primary flex items-center gap-2"
+                  >
+                    <FiEdit2 /> Edit Profile
+                  </button>
+                )}
+              </div>
+
+              {profileEditMode ? (
+                <form className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={editData.fullName}
+                      onChange={handleEditChange}
+                      className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editData.email}
+                      onChange={handleEditChange}
+                      className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={editData.phone}
+                      onChange={handleEditChange}
+                      placeholder="+91 XXXXXXXXXX"
+                      className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Address / Farm Location
+                    </label>
+                    <textarea
+                      name="address"
+                      value={editData.address}
+                      onChange={handleEditChange}
+                      placeholder="Enter your full address or farm location"
+                      rows="3"
+                      className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleSaveProfile}
+                      className="btn-primary flex items-center gap-2"
+                    >
+                      <FiCheck /> Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileEditMode(false);
+                        setEditData({
+                          fullName: profile.fullName,
+                          email: profile.email,
+                          phone: profile.phone || '',
+                          address: profile.address || '',
+                        });
+                      }}
+                      className="btn-outline flex items-center gap-2"
+                    >
+                      <FiX /> Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-4">
+                  <div className="border-b pb-4 flex items-center gap-3">
+                    <FiUser className="text-primary text-xl" />
+                    <div>
+                      <p className="text-sm text-gray-600">Full Name</p>
+                      <p className="font-semibold">{profile.fullName}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-b pb-4 flex items-center gap-3">
+                    <FiMail className="text-primary text-xl" />
+                    <div>
+                      <p className="text-sm text-gray-600">Email Address</p>
+                      <p className="font-semibold">{profile.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-b pb-4 flex items-center gap-3">
+                    <FiPhone className="text-primary text-xl" />
+                    <div>
+                      <p className="text-sm text-gray-600">Phone Number</p>
+                      <p className="font-semibold">{profile.phone || 'Not provided'}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-b pb-4 flex items-center gap-3">
+                    <FiAddress className="text-primary text-xl" />
+                    <div>
+                      <p className="text-sm text-gray-600">Farm Address / Location</p>
+                      <p className="font-semibold">{profile.address || 'Not provided'}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-200 rounded p-4 mt-4">
+                    <p className="text-sm text-gray-600">Account Type</p>
+                    <p className="font-semibold text-green-600">{profile.role}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       ) : activeTab === 'orders' ? (
         /* Orders Tab */
