@@ -4,6 +4,28 @@ const { authMiddleware, authorizeRole } = require('../middleware/auth');
 const { body } = require('express-validator');
 const orderController = require('../controllers/orderController');
 
+// Create Razorpay order for checkout (Customer only)
+router.post(
+  '/razorpay/order',
+  authMiddleware,
+  authorizeRole(['CUSTOMER']),
+  orderController.createRazorpayOrder
+);
+
+// Verify Razorpay payment and create order
+router.post(
+  '/razorpay/verify',
+  authMiddleware,
+  authorizeRole(['CUSTOMER']),
+  [
+    body('deliveryAddress').notEmpty().trim(),
+    body('razorpay_payment_id').notEmpty(),
+    body('razorpay_order_id').notEmpty(),
+    body('razorpay_signature').notEmpty(),
+  ],
+  orderController.verifyRazorpayPayment
+);
+
 // Create order (Customer only)
 router.post(
   '/',

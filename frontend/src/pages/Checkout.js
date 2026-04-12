@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { orderAPI, cartAPI } from '../services/api';
+import { orderAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,65 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+      if (existingScript) {
+        return resolve(true);
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleOnlinePayment = async () => {
+    const paymentOrderResponse = await orderAPI.createRazorpayOrder();
+    const { orderId, amount, currency, keyId } = paymentOrderResponse.data.data;
+
+    const options = {
+      key: keyId,
+      amount,
+      currency,
+      name: 'Farmer Marketplace',
+      description: 'Online payment for your order',
+      order_id: orderId,
+      prefill: {
+        name: user?.fullName || '',
+        email: user?.email || '',
+        contact: user?.phone || '',
+      },
+      theme: {
+        color: '#2563eb',
+      },
+      handler: async (response) => {
+        try {
+          await orderAPI.verifyRazorpayPayment({
+            deliveryAddress,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+          toast.success('Payment successful and order placed!');
+          navigate('/customer/dashboard');
+        } catch (error) {
+          toast.error(error.response?.data?.message || 'Payment verification failed');
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setLoading(false);
+        },
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
@@ -22,13 +81,22 @@ const Checkout = () => {
     setLoading(true);
 
     try {
-      const response = await orderAPI.create({
-        deliveryAddress,
-        paymentMethod,
-      });
+      if (paymentMethod === 'ONLINE') {
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          toast.error('Unable to load payment gateway, please try again later.');
+          return;
+        }
 
-      toast.success('Order placed successfully!');
-      navigate(`/customer/dashboard`);
+        await handleOnlinePayment();
+      } else {
+        await orderAPI.create({
+          deliveryAddress,
+          paymentMethod,
+        });
+        toast.success('Order placed successfully!');
+        navigate(`/customer/dashboard`);
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to place order');
     } finally {
@@ -121,14 +189,14 @@ const Checkout = () => {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="mr-3"
                   />
-                  <span className="font-semibold">Online Payment (Demo)</span>
+                  <span className="font-semibold">Online Payment (Razorpay Test Mode)</span>
                 </label>
               </div>
 
               {paymentMethod === 'ONLINE' && (
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-sm text-blue-800">
-                    💳 This is a demo payment option. In production, this would connect to a payment gateway.
+                    💳 This uses Razorpay test mode. You can pay with test cards from Razorpay documentation.
                   </p>
                 </div>
               )}

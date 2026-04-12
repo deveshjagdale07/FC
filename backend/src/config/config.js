@@ -20,4 +20,8 @@ module.exports = {
     maxFileSize: process.env.MAX_FILE_SIZE || 5242880, // 5MB
     uploadPath: process.env.UPLOAD_PATH || path.join(__dirname, '../../uploads'),
   },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID?.trim() || 'rzp_test_your_test_key',
+    keySecret: process.env.RAZORPAY_KEY_SECRET?.trim() || 'your_test_secret',
+  },
 };

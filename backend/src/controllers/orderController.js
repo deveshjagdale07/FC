@@ -1,6 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+const config = require('../config/config');
 
 const prisma = new PrismaClient();
+
+const razorpayClient = new Razorpay({
+  key_id: config.razorpay.keyId,
+  key_secret: config.razorpay.keySecret,
+});
 
 // Generate unique order number
 const generateOrderNumber = () => {
@@ -116,6 +124,178 @@ const createOrder = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error creating order' 
+    });
+  }
+};
+
+// Create Razorpay order for checkout
+const createRazorpayOrder = async (req, res) => {
+  try {
+    const customerId = req.user.userId;
+
+    const cartItems = await prisma.cartItem.findMany({
+      where: { customerId },
+      include: { product: true },
+    });
+
+    if (cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty',
+      });
+    }
+
+    let totalPrice = 0;
+    for (const item of cartItems) {
+      if (item.product.quantity < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${item.product.name}`,
+        });
+      }
+      totalPrice += item.product.price * item.quantity;
+    }
+
+    const amount = Math.round(totalPrice * 100); // amount in paise
+    const razorpayOrder = await razorpayClient.orders.create({
+      amount,
+      currency: 'INR',
+      payment_capture: 1,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        keyId: config.razorpay.keyId,
+      },
+    });
+  } catch (error) {
+    console.error('Create Razorpay order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating payment order',
+    });
+  }
+};
+
+// Verify Razorpay payment and create order
+const verifyRazorpayPayment = async (req, res) => {
+  try {
+    const customerId = req.user.userId;
+    const { deliveryAddress, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+
+    const generatedSignature = crypto
+      .createHmac('sha256', config.razorpay.keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment verification failed',
+      });
+    }
+
+    const cartItems = await prisma.cartItem.findMany({
+      where: { customerId },
+      include: { product: true },
+    });
+
+    if (cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty',
+      });
+    }
+
+    let totalPrice = 0;
+    for (const item of cartItems) {
+      if (item.product.quantity < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${item.product.name}`,
+        });
+      }
+      totalPrice += item.product.price * item.quantity;
+    }
+
+    const order = await prisma.order.create({
+      data: {
+        customerId,
+        orderNumber: generateOrderNumber(),
+        totalPrice: parseFloat(totalPrice.toFixed(2)),
+        deliveryAddress,
+        paymentMethod: 'ONLINE',
+        status: 'PENDING',
+        paymentStatus: 'COMPLETED',
+        razorpayPaymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id,
+      },
+    });
+
+    const orderItems = await Promise.all(
+      cartItems.map(async (item) => {
+        const orderItem = await prisma.orderItem.create({
+          data: {
+            orderId: order.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            priceAtOrder: item.product.price,
+          },
+        });
+
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            quantity: { decrement: item.quantity },
+          },
+        });
+
+        return orderItem;
+      })
+    );
+
+    await prisma.cartItem.deleteMany({ where: { customerId } });
+
+    const completeOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                farmer: { select: { id: true, fullName: true, email: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Payment verified and order created successfully',
+      data: {
+        order: {
+          ...completeOrder,
+          items: completeOrder.items.map(item => ({
+            ...item,
+            product: {
+              ...item.product,
+              images: item.product.images ? JSON.parse(item.product.images) : [],
+            },
+          })),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Verify Razorpay payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Payment verification failed',
     });
   }
 };
@@ -284,6 +464,49 @@ const getFarmerOrders = async (req, res) => {
     // Filter orders to only include those with items from this farmer
     const farmerOrders = orders.filter(order => order.items.length > 0);
 
+    const totalRevenue = farmerOrders.reduce((orderSum, order) => {
+      return orderSum + order.items.reduce((itemSum, item) => {
+        return itemSum + ((item.priceAtOrder || 0) * (item.quantity || 0));
+      }, 0);
+    }, 0);
+
+    const totalItemsSold = farmerOrders.reduce((orderSum, order) => {
+      return orderSum + order.items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
+    }, 0);
+
+    const uniqueProductIds = new Set();
+    farmerOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        uniqueProductIds.add(item.product?.id || item.productId);
+      });
+    });
+
+    const orderStatusCounts = farmerOrders.reduce((acc, order) => {
+      acc[order.status] = (acc[order.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const paymentMethodCounts = farmerOrders.reduce((acc, order) => {
+      acc[order.paymentMethod] = (acc[order.paymentMethod] || 0) + 1;
+      return acc;
+    }, {});
+
+    const paymentStatusCounts = farmerOrders.reduce((acc, order) => {
+      acc[order.paymentStatus] = (acc[order.paymentStatus] || 0) + 1;
+      return acc;
+    }, {});
+
+    const stats = {
+      totalOrders: farmerOrders.length,
+      totalRevenue,
+      totalItemsSold,
+      uniqueProductsSold: uniqueProductIds.size,
+      averageOrderValue: farmerOrders.length ? totalRevenue / farmerOrders.length : 0,
+      orderStatusCounts,
+      paymentMethodCounts,
+      paymentStatusCounts,
+    };
+
     res.json({
       success: true,
       data: {
@@ -302,6 +525,7 @@ const getFarmerOrders = async (req, res) => {
           limit: parseInt(limit),
           total: farmerOrders.length,
         },
+        stats,
       },
     });
   } catch (error) {
@@ -396,6 +620,8 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
   createOrder,
+  createRazorpayOrder,
+  verifyRazorpayPayment,
   getCustomerOrders,
   getOrderById,
   getFarmerOrders,

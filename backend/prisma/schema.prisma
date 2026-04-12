@@ -105,6 +105,8 @@ model Order {
   status           OrderStatus   @default(PENDING)
   paymentMethod    PaymentMethod @default(COD)
   paymentStatus    PaymentStatus @default(PENDING)
+  razorpayPaymentId String?
+  razorpayOrderId   String?
   deliveryAddress  String
   orderNumber      String        @unique
   createdAt        DateTime      @default(now())

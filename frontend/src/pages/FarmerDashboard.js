@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 const FarmerDashboard = () => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
+  const [orderStats, setOrderStats] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -42,6 +43,7 @@ const FarmerDashboard = () => {
       setLoading(true);
       const response = await orderAPI.getFarmerOrders();
       setOrders(response.data.data.orders || []);
+      setOrderStats(response.data.data.stats || null);
     } catch (error) {
       toast.error('Failed to load orders');
     } finally {
@@ -451,6 +453,63 @@ const FarmerDashboard = () => {
       ) : activeTab === 'orders' ? (
         /* Orders Tab */
         <div className="space-y-6">
+          {orderStats && (
+            <div className="card p-6">
+              <h2 className="text-2xl font-bold mb-6">Order Analytics</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Total Orders</p>
+                  <p className="text-3xl font-bold">{orderStats.totalOrders}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Total Revenue</p>
+                  <p className="text-3xl font-bold">₹{orderStats.totalRevenue.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Items Sold</p>
+                  <p className="text-3xl font-bold">{orderStats.totalItemsSold}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Unique Products Sold</p>
+                  <p className="text-3xl font-bold">{orderStats.uniqueProductsSold}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div className="p-4 bg-white rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500 mb-3">Orders by Status</p>
+                  <div className="space-y-2 text-sm">
+                    {['PENDING', 'ACCEPTED', 'REJECTED', 'SHIPPED', 'DELIVERED'].map((status) => (
+                      <div key={status} className="flex justify-between">
+                        <span>{status.charAt(0) + status.slice(1).toLowerCase()}</span>
+                        <span>{orderStats.orderStatusCounts[status] || 0}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4 bg-white rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500 mb-3">Payments</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Cash on Delivery</span>
+                      <span>{orderStats.paymentMethodCounts.COD || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Online Payment</span>
+                      <span>{orderStats.paymentMethodCounts.ONLINE || 0}</span>
+                    </div>
+                    {Object.keys(orderStats.paymentStatusCounts).map((status) => (
+                      <div key={status} className="flex justify-between">
+                        <span>{status.charAt(0) + status.slice(1).toLowerCase()}</span>
+                        <span>{orderStats.paymentStatusCounts[status]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {orders.length === 0 ? (
             <div className="text-center card py-12">
               <FiPackage className="mx-auto text-6xl text-gray-300 mb-4" />
@@ -510,6 +569,19 @@ const FarmerDashboard = () => {
                   <p className="text-sm text-gray-600">
                     Phone: {order.customer.phone}
                   </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <p className="text-gray-600 text-sm">Payment Method</p>
+                    <p className="font-semibold">
+                      {order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600 text-sm">Payment Status</p>
+                    <p className="font-semibold text-green-600">{order.paymentStatus || 'Pending'}</p>
+                  </div>
                 </div>
               </div>
             ))

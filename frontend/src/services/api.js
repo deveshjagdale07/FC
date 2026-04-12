@@ -65,6 +65,8 @@ export const cartAPI = {
 // Order API calls
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
+  createRazorpayOrder: () => api.post('/orders/razorpay/order'),
+  verifyRazorpayPayment: (data) => api.post('/orders/razorpay/verify', data),
   getCustomerOrders: (params) => api.get('/orders/customer/orders', { params }),
   getFarmerOrders: (params) => api.get('/orders/farmer/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
