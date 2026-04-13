@@ -69,6 +69,8 @@ export const orderAPI = {
   verifyRazorpayPayment: (data) => api.post('/orders/razorpay/verify', data),
   getCustomerOrders: (params) => api.get('/orders/customer/orders', { params }),
   getFarmerOrders: (params) => api.get('/orders/farmer/orders', { params }),
+  getFarmerPayments: () => api.get('/orders/farmer/payments'),
+  requestWithdrawal: (data) => api.post('/orders/farmer/payments/withdraw', data),
   getById: (id) => api.get(`/orders/${id}`),
   updateStatus: (id, data) => api.put(`/orders/${id}`, data),
 };
@@ -88,6 +90,8 @@ export const adminAPI = {
   activateUser: (userId) => api.put(`/admin/users/${userId}/activate`),
   getProducts: (params) => api.get('/admin/products', { params }),
   getOrders: (params) => api.get('/admin/orders', { params }),
+  getWithdrawals: () => api.get('/admin/withdrawals'),
+  updateWithdrawalStatus: (withdrawalId, data) => api.put(`/admin/withdrawals/${withdrawalId}/status`, data),
   getDashboardStats: () => api.get('/admin/dashboard/stats'),
 };
 

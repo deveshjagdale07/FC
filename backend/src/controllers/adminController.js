@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -239,6 +239,91 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+// Get all withdrawal requests
+const getAllWithdrawals = async (req, res) => {
+  try {
+    const withdrawals = await prisma.withdrawalRequest.findMany({
+      orderBy: { requestedAt: 'desc' },
+      include: {
+        farmer: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        withdrawals,
+      },
+    });
+  } catch (error) {
+    console.error('Get all withdrawals error:', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2021', 'P2025'].includes(error.code)) {
+      return res.json({
+        success: true,
+        data: {
+          withdrawals: [],
+        },
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching withdrawal requests',
+    });
+  }
+};
+
+// Update withdrawal status
+const updateWithdrawalStatus = async (req, res) => {
+  try {
+    const { withdrawalId } = req.params;
+    const { status } = req.body;
+
+    if (!['APPROVED', 'REJECTED'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status',
+      });
+    }
+
+    const withdrawal = await prisma.withdrawalRequest.findUnique({
+      where: { id: parseInt(withdrawalId) },
+    });
+
+    if (!withdrawal) {
+      return res.status(404).json({
+        success: false,
+        message: 'Withdrawal request not found',
+      });
+    }
+
+    const updatedWithdrawal = await prisma.withdrawalRequest.update({
+      where: { id: parseInt(withdrawalId) },
+      data: {
+        status,
+        processedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Withdrawal request ${status.toLowerCase()} successfully`,
+      data: updatedWithdrawal,
+    });
+  } catch (error) {
+    console.error('Update withdrawal status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating withdrawal request',
+    });
+  }
+};
+
 // Get dashboard stats
 const getDashboardStats = async (req, res) => {
   try {
@@ -291,5 +376,7 @@ module.exports = {
   activateUser,
   getAllProducts,
   getAllOrders,
+  getAllWithdrawals,
+  updateWithdrawalStatus,
   getDashboardStats,
 };

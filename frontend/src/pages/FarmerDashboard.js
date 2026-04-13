@@ -7,6 +7,17 @@ const FarmerDashboard = () => {
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [orderStats, setOrderStats] = useState(null);
+  const [paymentSummary, setPaymentSummary] = useState(null);
+  const [withdrawals, setWithdrawals] = useState([]);
+  const [withdrawalForm, setWithdrawalForm] = useState({
+    amount: '',
+    method: 'BANK',
+    bankName: '',
+    accountNumber: '',
+    ifscCode: '',
+    upiId: '',
+  });
+  const [isSubmittingWithdrawal, setIsSubmittingWithdrawal] = useState(false);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -31,12 +42,71 @@ const FarmerDashboard = () => {
   useEffect(() => {
     if (activeTab === 'orders') {
       fetchOrders();
+    } else if (activeTab === 'payments') {
+      fetchPayments();
     } else if (activeTab === 'products') {
       fetchProducts();
     } else if (activeTab === 'profile') {
       fetchProfile();
     }
   }, [activeTab]);
+
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      const response = await orderAPI.getFarmerPayments();
+      setPaymentSummary(response.data.data.summary || null);
+      setWithdrawals(response.data.data.withdrawals || []);
+    } catch (error) {
+      console.error('Failed to load payment details:', error);
+      toast.error('Failed to load payment details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdrawalChange = (e) => {
+    const { name, value } = e.target;
+    setWithdrawalForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmitWithdrawal = async (e) => {
+    e.preventDefault();
+
+    if (!withdrawalForm.amount) {
+      toast.error('Enter the amount you want to withdraw');
+      return;
+    }
+
+    setIsSubmittingWithdrawal(true);
+    try {
+      await orderAPI.requestWithdrawal({
+        amount: withdrawalForm.amount,
+        method: withdrawalForm.method,
+        bankName: withdrawalForm.bankName,
+        accountNumber: withdrawalForm.accountNumber,
+        ifscCode: withdrawalForm.ifscCode,
+        upiId: withdrawalForm.upiId,
+      });
+      toast.success('Withdrawal request submitted');
+      setWithdrawalForm({
+        amount: '',
+        method: 'BANK',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
+        upiId: '',
+      });
+      fetchPayments();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to submit withdrawal request');
+    } finally {
+      setIsSubmittingWithdrawal(false);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -292,6 +362,16 @@ const FarmerDashboard = () => {
           }`}
         >
           Orders
+        </button>
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={`px-4 py-3 font-semibold border-b-2 ${
+            activeTab === 'payments'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          Payments
         </button>
         <button
           onClick={() => setActiveTab('products')}
@@ -586,6 +666,172 @@ const FarmerDashboard = () => {
               </div>
             ))
           )}
+        </div>
+      ) : activeTab === 'payments' ? (
+        /* Payments Tab */
+        <div className="space-y-6">
+          <div className="card p-6">
+            <h2 className="text-2xl font-bold mb-6">Payment Dashboard</h2>
+            {paymentSummary ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Completed Earnings</p>
+                  <p className="text-3xl font-bold">₹{paymentSummary.totalCompletedEarnings.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Pending Earnings</p>
+                  <p className="text-3xl font-bold">₹{paymentSummary.totalPendingEarnings.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Available Balance</p>
+                  <p className="text-3xl font-bold">₹{paymentSummary.availableBalance.toFixed(2)}</p>
+                </div>
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-sm text-gray-500">Requested Withdrawals</p>
+                  <p className="text-3xl font-bold">{paymentSummary.withdrawalRequestsCount}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">Loading payment summary...</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="card p-6">
+              <h3 className="text-xl font-bold mb-4">Request Withdrawal</h3>
+              <form onSubmit={handleSubmitWithdrawal} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Amount</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    value={withdrawalForm.amount}
+                    onChange={handleWithdrawalChange}
+                    step="0.01"
+                    min="0"
+                    className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                    placeholder="Enter amount to withdraw"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold mb-2">Transfer Method</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="method"
+                        value="BANK"
+                        checked={withdrawalForm.method === 'BANK'}
+                        onChange={handleWithdrawalChange}
+                        className="form-radio"
+                      />
+                      Bank Transfer
+                    </label>
+                    <label className="flex items-center gap-2 border rounded px-3 py-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="method"
+                        value="UPI"
+                        checked={withdrawalForm.method === 'UPI'}
+                        onChange={handleWithdrawalChange}
+                        className="form-radio"
+                      />
+                      UPI Transfer
+                    </label>
+                  </div>
+                </div>
+
+                {withdrawalForm.method === 'BANK' ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Bank Name</label>
+                      <input
+                        type="text"
+                        name="bankName"
+                        value={withdrawalForm.bankName}
+                        onChange={handleWithdrawalChange}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                        placeholder="Bank name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Account Number</label>
+                      <input
+                        type="text"
+                        name="accountNumber"
+                        value={withdrawalForm.accountNumber}
+                        onChange={handleWithdrawalChange}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                        placeholder="Account number"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">IFSC Code</label>
+                      <input
+                        type="text"
+                        name="ifscCode"
+                        value={withdrawalForm.ifscCode}
+                        onChange={handleWithdrawalChange}
+                        className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                        placeholder="IFSC code"
+                        required
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2">UPI ID</label>
+                    <input
+                      type="text"
+                      name="upiId"
+                      value={withdrawalForm.upiId}
+                      onChange={handleWithdrawalChange}
+                      className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
+                      placeholder="example@upi"
+                      required
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingWithdrawal}
+                  className="btn-primary w-full"
+                >
+                  {isSubmittingWithdrawal ? 'Submitting...' : 'Submit Withdrawal'}
+                </button>
+              </form>
+            </div>
+
+            <div className="card p-6">
+              <h3 className="text-xl font-bold mb-4">Withdrawal History</h3>
+              {withdrawals.length === 0 ? (
+                <p className="text-gray-500">No withdrawal requests yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {withdrawals.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-4 bg-slate-50">
+                      <div className="flex justify-between items-center mb-2">
+                        <p className="font-semibold">₹{item.amount.toFixed(2)}</p>
+                        <span className="text-sm text-gray-600">{item.status}</span>
+                      </div>
+                      <p className="text-sm text-gray-600">{item.method === 'BANK' ? 'Bank Transfer' : 'UPI Transfer'}</p>
+                      {item.method === 'BANK' ? (
+                        <p className="text-sm text-gray-600">{item.bankName} • {item.accountNumber}</p>
+                      ) : (
+                        <p className="text-sm text-gray-600">{item.upiId}</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">Requested on {new Date(item.requestedAt).toLocaleDateString()}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       ) : (
         /* Products Tab */

@@ -54,6 +54,22 @@ router.get(
   orderController.getFarmerOrders
 );
 
+// Get farmer payment summary and withdrawal requests
+router.get(
+  '/farmer/payments',
+  authMiddleware,
+  authorizeRole(['FARMER']),
+  orderController.getFarmerPayments
+);
+
+// Create withdrawal request
+router.post(
+  '/farmer/payments/withdraw',
+  authMiddleware,
+  authorizeRole(['FARMER']),
+  orderController.createWithdrawalRequest
+);
+
 // Get order by ID
 router.get(
   '/:orderId',

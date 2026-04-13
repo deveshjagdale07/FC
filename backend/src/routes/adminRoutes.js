@@ -17,6 +17,10 @@ router.get('/products', adminController.getAllProducts);
 // Order management
 router.get('/orders', adminController.getAllOrders);
 
+// Withdrawal management
+router.get('/withdrawals', adminController.getAllWithdrawals);
+router.put('/withdrawals/:withdrawalId/status', adminController.updateWithdrawalStatus);
+
 // Dashboard stats
 router.get('/dashboard/stats', adminController.getDashboardStats);
 

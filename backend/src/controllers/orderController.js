@@ -537,6 +537,148 @@ const getFarmerOrders = async (req, res) => {
   }
 };
 
+// Get farmer payment summary and withdrawal requests
+const getFarmerPayments = async (req, res) => {
+  try {
+    const farmerId = req.user.userId;
+
+    const farmerItems = await prisma.orderItem.findMany({
+      where: {
+        product: { farmerId },
+      },
+      include: {
+        order: true,
+      },
+    });
+
+    const totalCompletedEarnings = farmerItems.reduce((sum, item) => {
+      return item.order.paymentStatus === 'COMPLETED'
+        ? sum + (item.priceAtOrder * item.quantity)
+        : sum;
+    }, 0);
+
+    const totalPendingEarnings = farmerItems.reduce((sum, item) => {
+      return item.order.paymentStatus !== 'COMPLETED'
+        ? sum + (item.priceAtOrder * item.quantity)
+        : sum;
+    }, 0);
+
+    const withdrawalRequests = await prisma.withdrawalRequest.findMany({
+      where: { farmerId },
+      orderBy: { requestedAt: 'desc' },
+    });
+
+    const totalApprovedWithdrawn = withdrawalRequests
+      .filter((request) => request.status === 'APPROVED')
+      .reduce((sum, request) => sum + request.amount, 0);
+
+    const totalRequested = withdrawalRequests.reduce((sum, request) => sum + request.amount, 0);
+
+    const summary = {
+      totalCompletedEarnings,
+      totalPendingEarnings,
+      totalWithdrawn: totalApprovedWithdrawn,
+      totalRequested,
+      availableBalance: Math.max(totalCompletedEarnings - totalApprovedWithdrawn, 0),
+      withdrawalRequestsCount: withdrawalRequests.length,
+    };
+
+    res.json({
+      success: true,
+      data: {
+        summary,
+        withdrawals: withdrawalRequests,
+      },
+    });
+  } catch (error) {
+    console.error('Get farmer payment summary error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching payment details',
+    });
+  }
+};
+
+const createWithdrawalRequest = async (req, res) => {
+  try {
+    const farmerId = req.user.userId;
+    const { amount, method, bankName, accountNumber, ifscCode, upiId } = req.body;
+
+    const parsedAmount = parseFloat(amount);
+    if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Enter a valid withdrawal amount' });
+    }
+
+    const farmerItems = await prisma.orderItem.findMany({
+      where: {
+        product: { farmerId },
+      },
+      include: {
+        order: true,
+      },
+    });
+
+    const totalCompletedEarnings = farmerItems.reduce((sum, item) => {
+      return item.order.paymentStatus === 'COMPLETED'
+        ? sum + (item.priceAtOrder * item.quantity)
+        : sum;
+    }, 0);
+
+    const approvedWithdrawals = await prisma.withdrawalRequest.aggregate({
+      where: { farmerId, status: 'APPROVED' },
+      _sum: { amount: true },
+    });
+
+    const currentBalance = totalCompletedEarnings - (approvedWithdrawals._sum.amount || 0);
+    if (parsedAmount > currentBalance) {
+      return res.status(400).json({
+        success: false,
+        message: 'Withdrawal amount exceeds available balance',
+      });
+    }
+
+    if (method === 'BANK') {
+      if (!bankName || !accountNumber || !ifscCode) {
+        return res.status(400).json({
+          success: false,
+          message: 'Bank name, account number and IFSC code are required for bank transfers',
+        });
+      }
+    }
+
+    if (method === 'UPI' && !upiId) {
+      return res.status(400).json({
+        success: false,
+        message: 'UPI ID is required for UPI transfers',
+      });
+    }
+
+    const withdrawal = await prisma.withdrawalRequest.create({
+      data: {
+        farmerId,
+        amount: parsedAmount,
+        method,
+        bankName: method === 'BANK' ? bankName : null,
+        accountNumber: method === 'BANK' ? accountNumber : null,
+        ifscCode: method === 'BANK' ? ifscCode : null,
+        upiId: method === 'UPI' ? upiId : null,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Withdrawal request submitted successfully',
+      data: withdrawal,
+    });
+  } catch (error) {
+    console.error('Create withdrawal request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting withdrawal request',
+    });
+  }
+};
+
 // Update order status (Farmer can accept/reject, Admin can change any status)
 const updateOrderStatus = async (req, res) => {
   try {
@@ -625,5 +767,7 @@ module.exports = {
   getCustomerOrders,
   getOrderById,
   getFarmerOrders,
+  getFarmerPayments,
+  createWithdrawalRequest,
   updateOrderStatus,
 };

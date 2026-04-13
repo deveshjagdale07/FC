@@ -28,6 +28,7 @@ model User {
   orders        Order[]
   reviews       Review[]
   cartItems     CartItem[]
+  withdrawalRequests WithdrawalRequest[]
 
   @@map("users")
 }
@@ -116,6 +117,36 @@ model Order {
   items            OrderItem[]
 
   @@map("orders")
+}
+
+model WithdrawalRequest {
+  id             Int                @id @default(autoincrement())
+  farmerId       Int
+  farmer         User               @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  amount         Float
+  method         WithdrawalMethod
+  bankName       String?
+  accountNumber  String?
+  ifscCode       String?
+  upiId          String?
+  status         WithdrawalStatus   @default(PENDING)
+  requestedAt    DateTime           @default(now())
+  processedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("withdrawal_requests")
+}
+
+enum WithdrawalMethod {
+  BANK
+  UPI
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // OrderItem model - Individual items in an order

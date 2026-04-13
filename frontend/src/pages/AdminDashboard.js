@@ -9,6 +9,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [withdrawals, setWithdrawals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,6 +21,8 @@ const AdminDashboard = () => {
       fetchProducts();
     } else if (activeTab === 'orders') {
       fetchOrders();
+    } else if (activeTab === 'withdrawals') {
+      fetchWithdrawals();
     }
   }, [activeTab]);
 
@@ -71,6 +74,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchWithdrawals = async () => {
+    try {
+      setLoading(true);
+      const response = await adminAPI.getWithdrawals();
+      setWithdrawals(response.data.data.withdrawals || []);
+    } catch (error) {
+      toast.error('Failed to load withdrawal requests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateWithdrawalStatus = async (withdrawalId, status) => {
+    if (!window.confirm(`Are you sure you want to ${status.toLowerCase()} this withdrawal request?`)) return;
+
+    try {
+      await adminAPI.updateWithdrawalStatus(withdrawalId, { status });
+      toast.success(`Withdrawal ${status.toLowerCase()} successfully`);
+      fetchWithdrawals();
+    } catch (error) {
+      toast.error('Failed to update withdrawal status');
+    }
+  };
+
   const handleDeactivateUser = async (userId) => {
     if (!window.confirm('Deactivate this user?')) return;
 
@@ -101,7 +128,7 @@ const AdminDashboard = () => {
 
       {/* Tabs */}
       <div className="flex gap-4 mb-8 border-b overflow-x-auto">
-        {['stats', 'users', 'products', 'orders'].map((tab) => (
+        {['stats', 'users', 'products', 'orders', 'withdrawals'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -298,6 +325,69 @@ const AdminDashboard = () => {
               </p>
             </div>
           ))}
+        </div>
+      ) : activeTab === 'withdrawals' ? (
+        /* Withdrawals Tab */
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold">Farmer</th>
+                <th className="px-4 py-3 text-left font-semibold">Amount</th>
+                <th className="px-4 py-3 text-left font-semibold">Method</th>
+                <th className="px-4 py-3 text-left font-semibold">Details</th>
+                <th className="px-4 py-3 text-left font-semibold">Status</th>
+                <th className="px-4 py-3 text-left font-semibold">Requested</th>
+                <th className="px-4 py-3 text-left font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {withdrawals.map((withdrawal) => (
+                <tr key={withdrawal.id} className="border-b hover:bg-gray-50">
+                  <td className="px-4 py-3">{withdrawal.farmer.fullName}</td>
+                  <td className="px-4 py-3 text-primary font-bold">₹{withdrawal.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3">{withdrawal.method === 'BANK' ? 'Bank' : 'UPI'}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {withdrawal.method === 'BANK'
+                      ? `${withdrawal.bankName} • ${withdrawal.accountNumber} • ${withdrawal.ifscCode}`
+                      : withdrawal.upiId}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        withdrawal.status === 'APPROVED'
+                          ? 'bg-green-100 text-green-800'
+                          : withdrawal.status === 'REJECTED'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {withdrawal.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{new Date(withdrawal.requestedAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 space-x-2">
+                    {withdrawal.status === 'PENDING' && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateWithdrawalStatus(withdrawal.id, 'APPROVED')}
+                          className="text-green-600 hover:text-green-800 font-semibold"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleUpdateWithdrawalStatus(withdrawal.id, 'REJECTED')}
+                          className="text-red-600 hover:text-red-800 font-semibold"
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : (
         /* Orders Tab */
