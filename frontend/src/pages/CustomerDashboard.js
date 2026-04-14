@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { authAPI, orderAPI } from '../services/api';
 import { FiPackage, FiMapPin, FiDollarSign, FiClock, FiEdit2, FiCheck, FiX, FiUser, FiMail, FiPhone, FiMapPin as FiAddress, FiDownload } from 'react-icons/fi';
 import { useLanguage } from '../context/LanguageContext';
+import ChatbotWidget from '../components/ChatbotWidget';
 import toast from 'react-hot-toast';
 
 const CustomerDashboard = () => {
@@ -135,6 +136,16 @@ const CustomerDashboard = () => {
           }`}
         >
           <FiPackage /> {t('customerOrdersTab')}
+        </button>
+        <button
+          onClick={() => setActiveTab('help')}
+          className={`px-4 py-3 font-semibold border-b-2 flex items-center gap-2 ${
+            activeTab === 'help'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          {t('chatbotTab')}
         </button>
       </div>
 
@@ -401,6 +412,12 @@ const CustomerDashboard = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'help' && (
+        <div>
+          <ChatbotWidget role="CUSTOMER" />
         </div>
       )}
     </div>

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { authAPI, orderAPI, productAPI } from '../services/api';
 import { FiPlus, FiEdit, FiTrash2, FiPackage, FiEdit2, FiCheck, FiX, FiUser, FiMail, FiPhone, FiMapPin as FiAddress } from 'react-icons/fi';
+import { useLanguage } from '../context/LanguageContext';
+import ChatbotWidget from '../components/ChatbotWidget';
 import toast from 'react-hot-toast';
 
 const FarmerDashboard = () => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('orders');
   const [orders, setOrders] = useState([]);
   const [orderStats, setOrderStats] = useState(null);
@@ -382,6 +385,16 @@ const FarmerDashboard = () => {
           }`}
         >
           Products
+        </button>
+        <button
+          onClick={() => setActiveTab('help')}
+          className={`px-4 py-3 font-semibold border-b-2 ${
+            activeTab === 'help'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-600'
+          }`}
+        >
+          {t('chatbotTab')}
         </button>
       </div>
 
@@ -832,6 +845,10 @@ const FarmerDashboard = () => {
               )}
             </div>
           </div>
+        </div>
+      ) : activeTab === 'help' ? (
+        <div>
+          <ChatbotWidget role="FARMER" />
         </div>
       ) : (
         /* Products Tab */
