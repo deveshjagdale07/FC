@@ -30,14 +30,14 @@ const Footer = () => {
               </Link>
             </li>
             <li>
-              <a href="#about" className="hover:text-primary">
+              <Link to="/about" className="hover:text-primary">
                 {t('footerAboutUs')}
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#contact" className="hover:text-primary">
+              <Link to="/contact" className="hover:text-primary">
                 {t('footerContact')}
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
