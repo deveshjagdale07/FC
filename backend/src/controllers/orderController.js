@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const Razorpay = require('razorpay');
+const PDFDocument = require('pdfkit');
 const crypto = require('crypto');
 const config = require('../config/config');
 
@@ -424,6 +425,100 @@ const getOrderById = async (req, res) => {
   }
 };
 
+// Download invoice PDF for customer orders
+const downloadOrderInvoice = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(orderId) },
+      include: {
+        items: {
+          include: {
+            product: {
+              include: {
+                farmer: { select: { id: true, fullName: true, email: true } },
+              },
+            },
+          },
+        },
+        customer: { select: { id: true, fullName: true, email: true, phone: true, address: true } },
+      },
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    if (userRole !== 'ADMIN' && order.customerId !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized',
+      });
+    }
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice_${order.orderNumber}.pdf`);
+
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    doc.pipe(res);
+
+    doc.fontSize(22).text('Invoice', { align: 'center' });
+    doc.moveDown();
+
+    doc.fontSize(12).text(`Invoice Number: ${order.orderNumber}`);
+    doc.text(`Order Date: ${new Date(order.createdAt).toLocaleDateString()}`);
+    doc.text(`Payment Method: ${order.paymentMethod}`);
+    doc.text(`Payment Status: ${order.paymentStatus}`);
+    doc.moveDown();
+
+    doc.fontSize(14).text('Customer Details');
+    doc.fontSize(12).text(`Name: ${order.customer.fullName}`);
+    doc.text(`Email: ${order.customer.email}`);
+    doc.text(`Phone: ${order.customer.phone || 'N/A'}`);
+    doc.text(`Delivery Address: ${order.deliveryAddress}`);
+    doc.moveDown();
+
+    doc.fontSize(14).text('Order Items');
+    doc.moveDown(0.5);
+
+    order.items.forEach((item, index) => {
+      const itemTotal = (item.priceAtOrder || 0) * (item.quantity || 0);
+      doc.fontSize(12).text(
+        `${index + 1}. ${item.product.name} - ${item.quantity} ${item.product.unit} x ₹${item.priceAtOrder.toFixed(2)} = ₹${itemTotal.toFixed(2)}`
+      );
+    });
+
+    doc.moveDown();
+    doc.fontSize(13).text(`Subtotal: ₹${order.totalPrice.toFixed(2)}`);
+    doc.moveDown();
+
+    doc.fontSize(14).text('Farmer Details');
+    const farmers = Array.from(new Set(order.items.map((item) => item.product.farmer.fullName)));
+    doc.fontSize(12).text(`Farmers: ${farmers.join(', ')}`);
+    doc.moveDown();
+
+    doc.fontSize(10).text('Thank you for shopping at Farmer Marketplace.', {
+      align: 'center',
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error('Download invoice error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Error generating invoice',
+      });
+    }
+  }
+};
+
 // Get farmer orders
 const getFarmerOrders = async (req, res) => {
   try {
@@ -766,6 +861,7 @@ module.exports = {
   verifyRazorpayPayment,
   getCustomerOrders,
   getOrderById,
+  downloadOrderInvoice,
   getFarmerOrders,
   getFarmerPayments,
   createWithdrawalRequest,

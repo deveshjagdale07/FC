@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { productAPI, cartAPI, reviewAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { FiStar, FiShoppingCart } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -16,6 +17,7 @@ const ProductDetail = () => {
   const [comment, setComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [userReview, setUserReview] = useState(null);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchProductDetails();
@@ -29,7 +31,7 @@ const ProductDetail = () => {
       const response = await productAPI.getById(id);
       setProduct(response.data.data.product);
     } catch (error) {
-      toast.error('Failed to load product');
+      toast.error(t('productDetailLoadError'));
       navigate('/products');
     } finally {
       setLoading(false);
@@ -49,13 +51,13 @@ const ProductDetail = () => {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
-      toast.error('Please login first');
+      toast.error(t('productDetailPleaseLogin'));
       navigate('/login');
       return;
     }
 
     if (user?.role !== 'CUSTOMER') {
-      toast.error('Only customers can add items to cart');
+      toast.error(t('productDetailOnlyCustomer'));
       return;
     }
 
@@ -64,9 +66,9 @@ const ProductDetail = () => {
         productId: parseInt(id),
         quantity: parseInt(quantity),
       });
-      toast.success('Added to cart!');
+      toast.success(t('productDetailAddedToCart'));
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to add to cart');
+      toast.error(error.response?.data?.message || t('productDetailAddCartError'));
     }
   };
 
@@ -74,13 +76,13 @@ const ProductDetail = () => {
     e.preventDefault();
 
     if (!isAuthenticated) {
-      toast.error('Please login first');
+      toast.error(t('productDetailPleaseLogin'));
       navigate('/login');
       return;
     }
 
     if (rating === 0) {
-      toast.error('Please select a rating');
+      toast.error(t('productDetailSelectRating'));
       return;
     }
 
@@ -93,13 +95,13 @@ const ProductDetail = () => {
         comment: comment || undefined,
       });
 
-      toast.success(userReview ? 'Review updated!' : 'Review added!');
+      toast.success(userReview ? t('productDetailReviewUpdated') : t('productDetailReviewAdded'));
       fetchProductDetails();
       fetchUserReview();
       setRating(0);
       setComment('');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to submit review');
+      toast.error(error.response?.data?.message || t('productDetailReviewError'));
     } finally {
       setSubmittingReview(false);
     }
@@ -114,7 +116,7 @@ const ProductDetail = () => {
   }
 
   if (!product) {
-    return <div className="text-center py-12">Product not found</div>;
+    return <div className="text-center py-12">{t('productDetailNotFound')}</div>;
   }
 
   return (
@@ -131,7 +133,7 @@ const ProductDetail = () => {
               />
             ) : (
               <div className="flex items-center justify-center h-96 text-gray-400">
-                No Image
+                {t('productDetailNoImage')}
               </div>
             )}
           </div>
@@ -157,7 +159,7 @@ const ProductDetail = () => {
             <div className="flex items-center">
               <FiStar className="text-yellow-400 mr-2" />
               <span className="font-semibold">
-                {product.rating ? product.rating.toFixed(1) : 'No'} ({product.totalReviews || 0} reviews)
+                {product.rating ? product.rating.toFixed(1) : t('productDetailNoRating')} ({product.totalReviews || 0} {t('productDetailReviews')})
               </span>
             </div>
             {product.isOrganic && (
@@ -175,23 +177,23 @@ const ProductDetail = () => {
 
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-gray-100 p-3 rounded">
-              <p className="text-gray-600 text-sm">Category</p>
+              <p className="text-gray-600 text-sm">{t('productDetailCategory')}</p>
               <p className="font-bold capitalize">{product.category}</p>
             </div>
             <div className="bg-gray-100 p-3 rounded">
-              <p className="text-gray-600 text-sm">Available Stock</p>
+              <p className="text-gray-600 text-sm">{t('productDetailAvailableStock')}</p>
               <p className="font-bold">{product.quantity}</p>
             </div>
             <div className="bg-gray-100 p-3 rounded">
-              <p className="text-gray-600 text-sm">Harvest Date</p>
+              <p className="text-gray-600 text-sm">{t('productDetailHarvestDate')}</p>
               <p className="font-bold">
                 {product.harvestDate
                   ? new Date(product.harvestDate).toLocaleDateString()
-                  : 'N/A'}
+                  : t('productDetailNotAvailable')}
               </p>
             </div>
             <div className="bg-gray-100 p-3 rounded">
-              <p className="text-gray-600 text-sm">Farmer</p>
+              <p className="text-gray-600 text-sm">{t('productDetailFarmer')}</p>
               <p className="font-bold">{product.farmer.fullName}</p>
             </div>
           </div>
@@ -220,17 +222,17 @@ const ProductDetail = () => {
                 </button>
               </div>
               <button onClick={handleAddToCart} className="flex-1 btn-primary flex items-center justify-center gap-2">
-                <FiShoppingCart /> Add to Cart
+                <FiShoppingCart /> {t('productDetailAddToCart')}
               </button>
             </div>
           )}
 
           {/* Farmer Info */}
           <div className="card">
-            <h3 className="font-bold text-lg mb-3">From Farmer</h3>
+            <h3 className="font-bold text-lg mb-3">{t('productDetailFromFarmer')}</h3>
             <p className="text-lg font-semibold mb-1">{product.farmer.fullName}</p>
-            <p className="text-gray-600 mb-1">Email: {product.farmer.email}</p>
-            {product.farmer.phone && <p className="text-gray-600">Phone: {product.farmer.phone}</p>}
+            <p className="text-gray-600 mb-1">{t('productDetailFarmerEmail')}: {product.farmer.email}</p>
+            {product.farmer.phone && <p className="text-gray-600">{t('productDetailFarmerPhone')}: {product.farmer.phone}</p>}
           </div>
         </div>
       </div>
@@ -238,8 +240,7 @@ const ProductDetail = () => {
       {/* Reviews Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <h2 className="text-3xl font-bold mb-6">Reviews</h2>
-
+            <h2 className="text-3xl font-bold mb-6">{t('productDetailReviewsTitle')}</h2>
           {product.reviews && product.reviews.length > 0 ? (
             <div className="space-y-4">
               {product.reviews.map((review) => (
@@ -258,7 +259,7 @@ const ProductDetail = () => {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500">No reviews yet</p>
+            <p className="text-gray-500">{t('productDetailNoReviews')}</p>
           )}
         </div>
 
@@ -267,11 +268,11 @@ const ProductDetail = () => {
           <div>
             <div className="card">
               <h3 className="font-bold text-lg mb-4">
-                {userReview ? 'Update Your Review' : 'Write a Review'}
+                {userReview ? t('productDetailUpdateReview') : t('productDetailWriteReview')}
               </h3>
               <form onSubmit={handleSubmitReview} className="space-y-4">
                 <div>
-                  <label className="block font-semibold mb-2">Rating</label>
+                  <label className="block font-semibold mb-2">{t('productDetailReviewRating')}</label>
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -289,13 +290,13 @@ const ProductDetail = () => {
                 </div>
 
                 <div>
-                  <label className="block font-semibold mb-2">Comment (Optional)</label>
+                  <label className="block font-semibold mb-2">{t('productDetailReviewComment')}</label>
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-primary"
                     rows="4"
-                    placeholder="Share your experience..."
+                    placeholder={t('productDetailReviewPlaceholder')}
                   />
                 </div>
 
@@ -305,10 +306,10 @@ const ProductDetail = () => {
                   className="w-full btn-primary"
                 >
                   {submittingReview
-                    ? 'Submitting...'
+                    ? t('productDetailSubmitting')
                     : userReview
-                    ? 'Update Review'
-                    : 'Submit Review'}
+                    ? t('productDetailUpdateReviewButton')
+                    : t('productDetailSubmitReviewButton')}
                 </button>
               </form>
             </div>

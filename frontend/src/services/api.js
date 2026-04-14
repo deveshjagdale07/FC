@@ -70,6 +70,7 @@ export const orderAPI = {
   getCustomerOrders: (params) => api.get('/orders/customer/orders', { params }),
   getFarmerOrders: (params) => api.get('/orders/farmer/orders', { params }),
   getFarmerPayments: () => api.get('/orders/farmer/payments'),
+  downloadInvoice: (orderId) => api.get(`/orders/${orderId}/invoice`, { responseType: 'blob' }),
   requestWithdrawal: (data) => api.post('/orders/farmer/payments/withdraw', data),
   getById: (id) => api.get(`/orders/${id}`),
   updateStatus: (id, data) => api.put(`/orders/${id}`, data),

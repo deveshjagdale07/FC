@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 
 const Register = () => {
@@ -14,6 +15,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { t } = useLanguage();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,7 +26,7 @@ const Register = () => {
     e.preventDefault();
     
     if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('registerPasswordError'));
       return;
     }
 
@@ -32,7 +34,7 @@ const Register = () => {
 
     try {
       const data = await register(formData);
-      toast.success('Registration successful!');
+      toast.success(t('registerButton') + ' successful!');
       const role = data?.data?.user?.role;
       if (role === 'FARMER') {
         navigate('/farmer/dashboard');
@@ -42,7 +44,7 @@ const Register = () => {
         navigate('/');
       }
     } catch (error) {
-      toast.error(error.message || 'Registration failed');
+      toast.error(error.message || `${t('registerButton')} failed`);
     } finally {
       setLoading(false);
     }
@@ -51,11 +53,11 @@ const Register = () => {
   return (
     <div className="container-main flex justify-center items-center min-h-screen">
       <div className="card w-full max-w-md">
-        <h2 className="text-3xl font-bold mb-6 text-center text-primary">Register</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-primary">{t('registerTitle')}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Full Name</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('registerName')}</label>
             <input
               type="text"
               name="fullName"
@@ -68,7 +70,7 @@ const Register = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Email</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('registerEmail')}</label>
             <input
               type="email"
               name="email"
@@ -81,7 +83,7 @@ const Register = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Phone</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('registerPhone')}</label>
             <input
               type="tel"
               name="phone"
@@ -93,7 +95,7 @@ const Register = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Password</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('registerPassword')}</label>
             <input
               type="password"
               name="password"
@@ -106,15 +108,15 @@ const Register = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">I am a:</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('registerRole')}</label>
             <select
               name="role"
               value={formData.role}
               onChange={handleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
             >
-              <option value="CUSTOMER">Customer</option>
-              <option value="FARMER">Farmer</option>
+              <option value="CUSTOMER">{t('registerAsCustomer')}</option>
+              <option value="FARMER">{t('registerAsFarmer')}</option>
             </select>
           </div>
 
@@ -123,14 +125,14 @@ const Register = () => {
             disabled={loading}
             className="w-full btn-primary font-semibold py-3 mt-6"
           >
-            {loading ? 'Registering...' : 'Register'}
+            {loading ? t('registerSubmitting') : t('registerButton')}
           </button>
         </form>
 
         <p className="text-center text-gray-600 mt-6">
-          Already have an account?{' '}
+          {t('registerLoginPrompt')}{' '}
           <Link to="/login" className="text-primary font-bold hover:underline">
-            Login here
+            {t('registerLoginLink')}
           </Link>
         </p>
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import './index.css';
 
 // Pages
@@ -104,16 +105,18 @@ const AppRoutes = () => {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-1">
-            <AppRoutes />
-          </main>
-          <Footer />
-          <Toaster position="bottom-right" />
-        </div>
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
+            <main className="flex-1">
+              <AppRoutes />
+            </main>
+            <Footer />
+            <Toaster position="bottom-right" />
+          </div>
+        </AuthProvider>
+      </LanguageProvider>
     </Router>
   );
 }

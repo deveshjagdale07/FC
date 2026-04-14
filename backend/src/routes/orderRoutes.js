@@ -70,6 +70,13 @@ router.post(
   orderController.createWithdrawalRequest
 );
 
+// Download invoice PDF
+router.get(
+  '/:orderId/invoice',
+  authMiddleware,
+  orderController.downloadOrderInvoice
+);
+
 // Get order by ID
 router.get(
   '/:orderId',

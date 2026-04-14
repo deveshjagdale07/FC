@@ -1,31 +1,33 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { FiTrendingUp, FiShield, FiTruck, FiAward } from 'react-icons/fi';
 
 const Home = () => {
   const { user, isAuthenticated, loading } = useAuth();
+  const { t } = useLanguage();
 
   const features = [
     {
       icon: <FiTrendingUp size={32} />,
-      title: 'Fresh Produce',
-      description: 'Direct from farmers to your table',
+      title: t('homeFeatureFresh'),
+      description: t('homeFeatureFreshDesc'),
     },
     {
       icon: <FiShield size={32} />,
-      title: 'Quality Assured',
-      description: 'All products are quality checked',
+      title: t('homeFeatureQuality'),
+      description: t('homeFeatureQualityDesc'),
     },
     {
       icon: <FiTruck size={32} />,
-      title: 'Fast Delivery',
-      description: 'Quick and reliable shipping',
+      title: t('homeFeatureDelivery'),
+      description: t('homeFeatureDeliveryDesc'),
     },
     {
       icon: <FiAward size={32} />,
-      title: 'Best Prices',
-      description: 'Direct from source, no middlemen',
+      title: t('homeFeaturePrices'),
+      description: t('homeFeaturePricesDesc'),
     },
   ];
 
@@ -33,29 +35,25 @@ const Home = () => {
     <div className="container-main">
       <section className="py-20 text-center">
         <h1 className="text-5xl font-bold text-primary mb-4">
-          Welcome back, {user.fullName}!
+          {t('heroWelcomeUser', { name: user.fullName })}
         </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Continue shopping fresh produce from trusted farmers.
-        </p>
+        <p className="text-xl text-gray-600 mb-8">{t('heroContinueShopping')}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Link to="/products" className="btn-primary text-lg px-8 py-3">
-            Browse Products
+            {t('homeBrowseProducts')}
           </Link>
           <Link to="/customer/dashboard" className="btn-outline text-lg px-8 py-3">
-            My Dashboard
+            {t('navDashboard')}
           </Link>
         </div>
       </section>
 
       <section className="py-16">
-        <h2 className="text-4xl font-bold text-center mb-12">Your Shopper Benefits</h2>
+        <h2 className="text-4xl font-bold text-center mb-12">{t('homeYourBenefits')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <div key={index} className="card text-center">
-              <div className="text-primary mb-4 flex justify-center">
-                {feature.icon}
-              </div>
+              <div className="text-primary mb-4 flex justify-center">{feature.icon}</div>
               <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
               <p className="text-gray-600">{feature.description}</p>
             </div>
@@ -69,51 +67,49 @@ const Home = () => {
     <div className="container-main">
       <section className="py-20 text-center">
         <h1 className="text-5xl font-bold text-primary mb-4">
-          Welcome back, Farmer {user.fullName}!
+          {t('heroWelcomeUser', { name: user.fullName })}
         </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Manage your products, orders and profile from one place.
-        </p>
+        <p className="text-xl text-gray-600 mb-8">{t('homeSellFasterDesc')}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Link to="/farmer/dashboard" className="btn-primary text-lg px-8 py-3">
-            Open Farmer Dashboard
+            {t('heroOpenFarmerDashboard')}
           </Link>
           <Link to="/products" className="btn-outline text-lg px-8 py-3">
-            View Marketplace
+            {t('heroViewMarketplace')}
           </Link>
         </div>
       </section>
 
       <section className="py-16">
-        <h2 className="text-4xl font-bold text-center mb-12">Farmer Tools</h2>
+        <h2 className="text-4xl font-bold text-center mb-12">{t('homeWhyChooseUs')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="card text-center">
             <div className="text-primary mb-4 flex justify-center">
               <FiTrendingUp size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-2">Sell Faster</h3>
-            <p className="text-gray-600">Showcase your fresh produce directly to buyers.</p>
+            <h3 className="text-xl font-bold mb-2">{t('homeSellFaster')}</h3>
+            <p className="text-gray-600">{t('homeSellFasterDesc')}</p>
           </div>
           <div className="card text-center">
             <div className="text-primary mb-4 flex justify-center">
               <FiShield size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-2">Secure Orders</h3>
-            <p className="text-gray-600">Accept orders and manage fulfillment in one dashboard.</p>
+            <h3 className="text-xl font-bold mb-2">{t('homeSecureOrders')}</h3>
+            <p className="text-gray-600">{t('homeSecureOrdersDesc')}</p>
           </div>
           <div className="card text-center">
             <div className="text-primary mb-4 flex justify-center">
               <FiTruck size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-2">Easy Shipping</h3>
-            <p className="text-gray-600">Track delivery and keep your customers updated.</p>
+            <h3 className="text-xl font-bold mb-2">{t('homeEasyShipping')}</h3>
+            <p className="text-gray-600">{t('homeEasyShippingDesc')}</p>
           </div>
           <div className="card text-center">
             <div className="text-primary mb-4 flex justify-center">
               <FiAward size={32} />
             </div>
-            <h3 className="text-xl font-bold mb-2">Trusted Seller</h3>
-            <p className="text-gray-600">Build trust with customers by keeping your profile updated.</p>
+            <h3 className="text-xl font-bold mb-2">{t('homeTrustedSeller')}</h3>
+            <p className="text-gray-600">{t('homeTrustedSellerDesc')}</p>
           </div>
         </div>
       </section>
@@ -123,14 +119,14 @@ const Home = () => {
   const renderAdminHome = () => (
     <div className="container-main">
       <section className="py-20 text-center">
-        <h1 className="text-5xl font-bold text-primary mb-4">Welcome back, Admin!</h1>
-        <p className="text-xl text-gray-600 mb-8">Manage the marketplace, review reports and approve content.</p>
+        <h1 className="text-5xl font-bold text-primary mb-4">{t('homeWelcome')}</h1>
+        <p className="text-xl text-gray-600 mb-8">{t('homeSubtitle')}</p>
         <div className="flex justify-center gap-4">
           <Link to="/admin/dashboard" className="btn-primary text-lg px-8 py-3">
-            Open Admin Dashboard
+            {t('navDashboard')}
           </Link>
           <Link to="/products" className="btn-outline text-lg px-8 py-3">
-            View Marketplace
+            {t('homeBrowseProducts')}
           </Link>
         </div>
       </section>
@@ -163,31 +159,25 @@ const Home = () => {
     <div className="container-main">
       {/* Hero Section */}
       <section className="py-20 text-center">
-        <h1 className="text-5xl font-bold text-primary mb-4">
-          Welcome to Farmer Marketplace
-        </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Direct connection between farmers and customers for fresh, quality produce
-        </p>
+        <h1 className="text-5xl font-bold text-primary mb-4">{t('homeWelcome')}</h1>
+        <p className="text-xl text-gray-600 mb-8">{t('homeSubtitle')}</p>
         <div className="flex justify-center gap-4">
           <Link to="/products" className="btn-primary text-lg px-8 py-3">
-            Browse Products
+            {t('homeBrowseProducts')}
           </Link>
           <Link to="/register" className="btn-outline text-lg px-8 py-3">
-            Get Started
+            {t('homeGetStarted')}
           </Link>
         </div>
       </section>
 
       {/* Features Section */}
       <section className="py-16">
-        <h2 className="text-4xl font-bold text-center mb-12">Why Choose Us?</h2>
+        <h2 className="text-4xl font-bold text-center mb-12">{t('homeWhyChooseUs')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <div key={index} className="card text-center">
-              <div className="text-primary mb-4 flex justify-center">
-                {feature.icon}
-              </div>
+              <div className="text-primary mb-4 flex justify-center">{feature.icon}</div>
               <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
               <p className="text-gray-600">{feature.description}</p>
             </div>
@@ -197,12 +187,10 @@ const Home = () => {
 
       {/* CTA Section */}
       <section className="bg-primary text-white rounded-lg p-12 text-center my-12">
-        <h2 className="text-3xl font-bold mb-4">Join Our Community</h2>
-        <p className="text-lg mb-6">
-          Are you a farmer? Share your products and reach customers directly.
-        </p>
+        <h2 className="text-3xl font-bold mb-4">{t('homeJoinCommunity')}</h2>
+        <p className="text-lg mb-6">{t('homeJoinCommunityDesc')}</p>
         <Link to="/register" className="btn-secondary text-lg px-8 py-3">
-          Register as Farmer
+          {t('homeRegisterAsFarmer')}
         </Link>
       </section>
 
@@ -211,15 +199,15 @@ const Home = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           <div>
             <h3 className="text-4xl font-bold text-primary">500+</h3>
-            <p className="text-gray-600 mt-2">Products Available</p>
+            <p className="text-gray-600 mt-2">{t('homeStatsProducts')}</p>
           </div>
           <div>
             <h3 className="text-4xl font-bold text-primary">2000+</h3>
-            <p className="text-gray-600 mt-2">Happy Customers</p>
+            <p className="text-gray-600 mt-2">{t('homeStatsCustomers')}</p>
           </div>
           <div>
-            <h3 className="text-4xl font-bold text-primary">100+</h3>
-            <p className="text-gray-600 mt-2">Trusted Farmers</p>
+            <h3 className="text-4xl font-bold text-primary">24/7</h3>
+            <p className="text-gray-600 mt-2">{t('homeFeatureDeliveryDesc')}</p>
           </div>
         </div>
       </section>

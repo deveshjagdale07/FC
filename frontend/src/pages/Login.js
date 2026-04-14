@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 
 const Login = () => {
@@ -11,6 +12,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,7 +25,7 @@ const Login = () => {
 
     try {
       const data = await login(formData);
-      toast.success('Login successful!');
+      toast.success(t('loginButton') + ' successful!');
       const role = data?.data?.user?.role;
       if (role === 'FARMER') {
         navigate('/farmer/dashboard');
@@ -35,7 +37,7 @@ const Login = () => {
         navigate('/');
       }
     } catch (error) {
-      toast.error(error.message || 'Login failed');
+      toast.error(error.message || `${t('loginButton')} failed`);
     } finally {
       setLoading(false);
     }
@@ -44,11 +46,11 @@ const Login = () => {
   return (
     <div className="container-main flex justify-center items-center min-h-screen">
       <div className="card w-full max-w-md">
-        <h2 className="text-3xl font-bold mb-6 text-center text-primary">Login</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-primary">{t('loginTitle')}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Email</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('loginEmail')}</label>
             <input
               type="email"
               name="email"
@@ -61,7 +63,7 @@ const Login = () => {
           </div>
 
           <div>
-            <label className="block text-gray-700 font-semibold mb-2">Password</label>
+            <label className="block text-gray-700 font-semibold mb-2">{t('loginPassword')}</label>
             <input
               type="password"
               name="password"
@@ -78,14 +80,14 @@ const Login = () => {
             disabled={loading}
             className="w-full btn-primary font-semibold py-3 mt-6"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? t('loginSubmitting') : t('loginButton')}
           </button>
         </form>
 
         <p className="text-center text-gray-600 mt-6">
-          Don't have an account?{' '}
+          {t('loginRegisterPrompt')}{' '}
           <Link to="/register" className="text-primary font-bold hover:underline">
-            Register here
+            {t('loginRegisterLink')}
           </Link>
         </p>
       </div>

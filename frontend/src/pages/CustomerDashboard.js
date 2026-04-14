@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authAPI, orderAPI } from '../services/api';
-import { FiPackage, FiMapPin, FiDollarSign, FiClock, FiEdit2, FiCheck, FiX, FiUser, FiMail, FiPhone, FiMapPin as FiAddress } from 'react-icons/fi';
+import { FiPackage, FiMapPin, FiDollarSign, FiClock, FiEdit2, FiCheck, FiX, FiUser, FiMail, FiPhone, FiMapPin as FiAddress, FiDownload } from 'react-icons/fi';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 
 const CustomerDashboard = () => {
@@ -11,6 +12,7 @@ const CustomerDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState({});
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (activeTab === 'orders') {
@@ -88,11 +90,29 @@ const CustomerDashboard = () => {
     }
   };
 
+  const handleDownloadInvoice = async (order) => {
+    try {
+      const response = await orderAPI.downloadInvoice(order.id);
+      const pdfBlob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `invoice_${order.orderNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      toast.error('Unable to download invoice');
+      console.error(error);
+    }
+  };
+
   const statusOptions = ['PENDING', 'ACCEPTED', 'SHIPPED', 'DELIVERED', 'REJECTED'];
 
   return (
     <div className="container-main">
-      <h1 className="text-4xl font-bold mb-8">My Dashboard</h1>
+      <h1 className="text-4xl font-bold mb-8">{t('customerDashboardTitle')}</h1>
 
       {/* Tabs */}
       <div className="flex gap-4 mb-8 border-b">
@@ -104,7 +124,7 @@ const CustomerDashboard = () => {
               : 'border-transparent text-gray-600'
           }`}
         >
-          <FiUser /> My Profile
+          <FiUser /> {t('customerProfileTab')}
         </button>
         <button
           onClick={() => setActiveTab('orders')}
@@ -114,7 +134,7 @@ const CustomerDashboard = () => {
               : 'border-transparent text-gray-600'
           }`}
         >
-          <FiPackage /> My Orders
+          <FiPackage /> {t('customerOrdersTab')}
         </button>
       </div>
 
@@ -128,13 +148,13 @@ const CustomerDashboard = () => {
           ) : profile ? (
             <div className="card max-w-2xl">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Profile Information</h2>
+                <h2 className="text-2xl font-bold">{t('customerProfileInfo')}</h2>
                 {!editMode && (
                   <button
                     onClick={() => setEditMode(true)}
                     className="btn-primary flex items-center gap-2"
                   >
-                    <FiEdit2 /> Edit Profile
+                    <FiEdit2 /> {t('customerEditProfile')}
                   </button>
                 )}
               </div>
@@ -143,7 +163,7 @@ const CustomerDashboard = () => {
                 <form className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Full Name
+                      {t('customerFullName')}
                     </label>
                     <input
                       type="text"
@@ -156,7 +176,7 @@ const CustomerDashboard = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email
+                      {t('customerEmail')}
                     </label>
                     <input
                       type="email"
@@ -169,7 +189,7 @@ const CustomerDashboard = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone
+                      {t('customerPhone')}
                     </label>
                     <input
                       type="tel"
@@ -183,13 +203,13 @@ const CustomerDashboard = () => {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Address
+                      {t('customerAddress')}
                     </label>
                     <textarea
                       name="address"
                       value={editData.address}
                       onChange={handleEditChange}
-                      placeholder="Enter your full address"
+                      placeholder={t('customerAddressPlaceholder')}
                       rows="3"
                       className="w-full px-4 py-2 border rounded focus:outline-none focus:border-primary"
                     />
@@ -225,7 +245,7 @@ const CustomerDashboard = () => {
                   <div className="border-b pb-4 flex items-center gap-3">
                     <FiUser className="text-primary text-xl" />
                     <div>
-                      <p className="text-sm text-gray-600">Full Name</p>
+                      <p className="text-sm text-gray-600">{t('customerFullName')}</p>
                       <p className="font-semibold">{profile.fullName}</p>
                     </div>
                   </div>
@@ -233,7 +253,7 @@ const CustomerDashboard = () => {
                   <div className="border-b pb-4 flex items-center gap-3">
                     <FiMail className="text-primary text-xl" />
                     <div>
-                      <p className="text-sm text-gray-600">Email Address</p>
+                      <p className="text-sm text-gray-600">{t('customerEmail')}</p>
                       <p className="font-semibold">{profile.email}</p>
                     </div>
                   </div>
@@ -241,21 +261,21 @@ const CustomerDashboard = () => {
                   <div className="border-b pb-4 flex items-center gap-3">
                     <FiPhone className="text-primary text-xl" />
                     <div>
-                      <p className="text-sm text-gray-600">Phone Number</p>
-                      <p className="font-semibold">{profile.phone || 'Not provided'}</p>
+                      <p className="text-sm text-gray-600">{t('customerPhone')}</p>
+                      <p className="font-semibold">{profile.phone || t('customerNotProvided')}</p>
                     </div>
                   </div>
 
                   <div className="pb-4 flex items-center gap-3">
                     <FiAddress className="text-primary text-xl" />
                     <div>
-                      <p className="text-sm text-gray-600">Address</p>
-                      <p className="font-semibold">{profile.address || 'Not provided'}</p>
+                      <p className="text-sm text-gray-600">{t('customerAddress')}</p>
+                      <p className="font-semibold">{profile.address || t('customerNotProvided')}</p>
                     </div>
                   </div>
 
                   <div className="bg-blue-50 border border-blue-200 rounded p-4 mt-4">
-                    <p className="text-sm text-gray-600">Account Type</p>
+                    <p className="text-sm text-gray-600">{t('customerAccountType')}</p>
                     <p className="font-semibold text-blue-600">{profile.role}</p>
                   </div>
                 </div>
@@ -276,7 +296,7 @@ const CustomerDashboard = () => {
                 selectedStatus === '' ? 'bg-primary text-white' : 'bg-gray-200'
               }`}
             >
-              All Orders
+              {t('customerStatusAll')}
             </button>
             {statusOptions.map((status) => (
               <button
@@ -286,7 +306,7 @@ const CustomerDashboard = () => {
                   selectedStatus === status ? 'bg-primary text-white' : 'bg-gray-200'
                 }`}
               >
-                {status}
+                {t(`status${status.charAt(0) + status.slice(1).toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -298,7 +318,7 @@ const CustomerDashboard = () => {
           ) : orders.length === 0 ? (
             <div className="text-center py-12 card">
               <FiPackage className="mx-auto text-6xl text-gray-300 mb-4" />
-              <p className="text-gray-500 text-lg">No orders found</p>
+              <p className="text-gray-500 text-lg">{t('customerNoOrders')}</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -306,28 +326,28 @@ const CustomerDashboard = () => {
                 <div key={order.id} className="card">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <p className="text-gray-600 text-sm">Order Number</p>
+                      <p className="text-gray-600 text-sm">{t('customerOrderNumber')}</p>
                       <p className="font-bold">{order.orderNumber}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 text-sm">Total Amount</p>
+                      <p className="text-gray-600 text-sm">{t('customerTotalAmount')}</p>
                       <p className="font-bold text-primary">₹{order.totalPrice.toFixed(2)}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 text-sm">Status</p>
+                      <p className="text-gray-600 text-sm">{t('customerStatus')}</p>
                       <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${getStatusColor(order.status)}`}>
-                        {order.status}
+                        {t(`status${order.status.charAt(0) + order.status.slice(1).toLowerCase()}`)}
                       </span>
                     </div>
                     <div>
-                      <p className="text-gray-600 text-sm">Order Date</p>
+                      <p className="text-gray-600 text-sm">{t('customerOrderDate')}</p>
                       <p className="font-semibold">{new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
 
                   <div className="border-t pt-4">
                     <p className="font-semibold mb-3 flex items-center gap-2">
-                      <FiPackage /> Items ({order.items.length})
+                      <FiPackage /> {t('customerItems')} ({order.items.length})
                     </p>
                     <div className="space-y-2">
                       {order.items.map((item) => (
@@ -358,15 +378,24 @@ const CustomerDashboard = () => {
 
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div>
-                      <p className="text-gray-600 text-sm">Payment Method</p>
+                      <p className="text-gray-600 text-sm">{t('customerPaymentMethod')}</p>
                       <p className="font-semibold">
-                        {order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment'}
+                        {order.paymentMethod === 'COD' ? t('checkoutCODShort') : t('checkoutOnlineShort')}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 text-sm">Payment Status</p>
+                      <p className="text-gray-600 text-sm">{t('customerPaymentStatus')}</p>
                       <p className="font-semibold text-green-600">{order.paymentStatus}</p>
                     </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => handleDownloadInvoice(order)}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded bg-primary text-white hover:bg-primary-dark"
+                    >
+                      <FiDownload /> {t('customerDownloadInvoice')}
+                    </button>
                   </div>
                 </div>
               ))}

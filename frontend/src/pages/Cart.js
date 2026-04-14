@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cartAPI } from '../services/api';
 import { FiTrash2, FiShoppingCart } from 'react-icons/fi';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchCart();
@@ -77,14 +79,14 @@ const Cart = () => {
 
   return (
     <div className="container-main">
-      <h1 className="text-4xl font-bold mb-8">Shopping Cart</h1>
+      <h1 className="text-4xl font-bold mb-8">{t('cartTitle')}</h1>
 
       {cartItems.length === 0 ? (
         <div className="text-center py-12">
           <FiShoppingCart className="mx-auto text-6xl text-gray-300 mb-4" />
-          <p className="text-gray-500 text-lg mb-6">Your cart is empty</p>
+          <p className="text-gray-500 text-lg mb-6">{t('cartEmpty')}</p>
           <Link to="/products" className="btn-primary">
-            Continue Shopping
+            {t('cartContinueShopping')}
           </Link>
         </div>
       ) : (
@@ -104,7 +106,7 @@ const Cart = () => {
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full text-gray-400">
-                        No Image
+                        {t('productNoImage')}
                       </div>
                     )}
                   </div>
@@ -149,7 +151,7 @@ const Cart = () => {
                       onClick={() => handleRemoveItem(item.id)}
                       className="text-red-500 hover:text-red-700 flex items-center gap-1"
                     >
-                      <FiTrash2 /> Remove
+                      <FiTrash2 /> {t('cartRemove')}
                     </button>
                   </div>
                 </div>
@@ -160,32 +162,32 @@ const Cart = () => {
               onClick={handleClearCart}
               className="mt-6 text-red-500 hover:text-red-700 font-semibold"
             >
-              Clear Cart
+              {t('cartClear')}
             </button>
           </div>
 
           {/* Cart Summary */}
           <div className="lg:col-span-1">
             <div className="card sticky top-20">
-              <h2 className="font-bold text-lg mb-6">Order Summary</h2>
+              <h2 className="font-bold text-lg mb-6">{t('cartOrderSummary')}</h2>
 
               <div className="space-y-3 mb-6 border-b pb-6">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
+                  <span className="text-gray-600">{t('cartSubtotal')}</span>
                   <span className="font-semibold">₹{totalPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
+                  <span className="text-gray-600">{t('cartShipping')}</span>
                   <span className="font-semibold">Free</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (0%)</span>
+                  <span className="text-gray-600">{t('cartTax')}</span>
                   <span className="font-semibold">₹0</span>
                 </div>
               </div>
 
               <div className="flex justify-between mb-6 text-xl font-bold">
-                <span>Total</span>
+                <span>{t('cartTotal')}</span>
                 <span className="text-primary">₹{totalPrice.toFixed(2)}</span>
               </div>
 
@@ -193,11 +195,11 @@ const Cart = () => {
                 onClick={() => navigate('/checkout')}
                 className="w-full btn-primary py-3 font-bold mb-3"
               >
-                Proceed to Checkout
+                {t('cartProceedCheckout')}
               </button>
 
               <Link to="/products" className="block w-full text-center btn-outline py-3">
-                Continue Shopping
+                {t('cartContinueShopping')}
               </Link>
             </div>
           </div>

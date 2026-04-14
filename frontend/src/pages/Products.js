@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { productAPI } from '../services/api';
 import { FiStar, FiShoppingCart } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -69,17 +70,18 @@ const Products = () => {
     setSearchParams(params);
   };
 
+  const { t } = useLanguage();
   const categories = ['fruits', 'vegetables', 'grains', 'dairy'];
 
   return (
     <div className="container-main">
-      <h1 className="text-4xl font-bold mb-8">Products</h1>
+      <h1 className="text-4xl font-bold mb-8">{t('productsTitle')}</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Sidebar Filters */}
         <div className="lg:col-span-1">
           <div className="card">
-            <h3 className="font-bold text-lg mb-4">Categories</h3>
+            <h3 className="font-bold text-lg mb-4">{t('productsCategories')}</h3>
             <div className="space-y-2">
               <button
                 onClick={() => handleCategoryChange('')}
@@ -87,7 +89,7 @@ const Products = () => {
                   !category ? 'bg-primary text-white' : 'hover:bg-gray-100'
                 }`}
               >
-                All
+                {t('productsAll')}
               </button>
               {categories.map((cat) => (
                 <button
@@ -97,7 +99,7 @@ const Products = () => {
                     category === cat ? 'bg-primary text-white' : 'hover:bg-gray-100'
                   }`}
                 >
-                  {cat}
+                  {t(`category_${cat}`)}
                 </button>
               ))}
             </div>
@@ -112,14 +114,14 @@ const Products = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products"
+                placeholder={t('productsSearchPlaceholder')}
                 className="w-full rounded border border-gray-300 px-4 py-2 focus:border-primary focus:outline-none"
               />
               <button
                 type="submit"
                 className="rounded bg-primary px-4 py-2 text-white hover:bg-primary-dark"
               >
-                Search
+                {t('productsSearchButton')}
               </button>
             </form>
           </div>
@@ -129,7 +131,7 @@ const Products = () => {
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No products found</p>
+              <p className="text-gray-500 text-lg">{t('productsNoProducts')}</p>
             </div>
           ) : (
             <>
@@ -147,7 +149,7 @@ const Products = () => {
                           />
                         ) : (
                           <div className="flex items-center justify-center h-full text-gray-400">
-                            No Image
+                            {t('productNoImage')}
                           </div>
                         )}
                       </div>
@@ -190,7 +192,7 @@ const Products = () => {
                     disabled={page === 1}
                     className="px-4 py-2 border rounded disabled:opacity-50"
                   >
-                    Previous
+                    {t('productsPrevious')}
                   </button>
                   {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((p) => (
                     <button
@@ -208,7 +210,7 @@ const Products = () => {
                     disabled={page === pagination.pages}
                     className="px-4 py-2 border rounded disabled:opacity-50"
                   >
-                    Next
+                    {t('productsNext')}
                   </button>
                 </div>
               )}
