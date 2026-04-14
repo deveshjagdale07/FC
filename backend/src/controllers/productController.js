@@ -53,7 +53,12 @@ const getAllProducts = async (req, res) => {
     const where = { isActive: true };
 
     if (category) where.category = category;
-    if (search) where.name = { contains: search };
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) where.price.gte = parseFloat(minPrice);

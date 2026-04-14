@@ -9,6 +9,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({});
   const [searchParams, setSearchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const category = searchParams.get('category') || '';
   const page = parseInt(searchParams.get('page') || '1');
@@ -37,6 +38,37 @@ const Products = () => {
     }
   };
 
+  useEffect(() => {
+    setSearchQuery(search);
+  }, [search]);
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const params = Object.fromEntries(searchParams);
+
+    if (searchQuery) {
+      params.search = searchQuery;
+    } else {
+      delete params.search;
+    }
+
+    params.page = 1;
+    setSearchParams(params);
+  };
+
+  const handleCategoryChange = (cat) => {
+    const params = Object.fromEntries(searchParams);
+
+    if (cat) {
+      params.category = cat;
+    } else {
+      delete params.category;
+    }
+
+    params.page = 1;
+    setSearchParams(params);
+  };
+
   const categories = ['fruits', 'vegetables', 'grains', 'dairy'];
 
   return (
@@ -50,7 +82,7 @@ const Products = () => {
             <h3 className="font-bold text-lg mb-4">Categories</h3>
             <div className="space-y-2">
               <button
-                onClick={() => setSearchParams({ ...Object.fromEntries(searchParams) })}
+                onClick={() => handleCategoryChange('')}
                 className={`block w-full text-left px-3 py-2 rounded ${
                   !category ? 'bg-primary text-white' : 'hover:bg-gray-100'
                 }`}
@@ -60,7 +92,7 @@ const Products = () => {
               {categories.map((cat) => (
                 <button
                   key={cat}
-                  onClick={() => setSearchParams({ category: cat })}
+                  onClick={() => handleCategoryChange(cat)}
                   className={`block w-full text-left px-3 py-2 rounded capitalize ${
                     category === cat ? 'bg-primary text-white' : 'hover:bg-gray-100'
                   }`}
@@ -74,6 +106,23 @@ const Products = () => {
 
         {/* Products Grid */}
         <div className="lg:col-span-3">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <form onSubmit={handleSearchSubmit} className="flex w-full md:w-1/2 gap-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products"
+                className="w-full rounded border border-gray-300 px-4 py-2 focus:border-primary focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="rounded bg-primary px-4 py-2 text-white hover:bg-primary-dark"
+              >
+                Search
+              </button>
+            </form>
+          </div>
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full"></div>
